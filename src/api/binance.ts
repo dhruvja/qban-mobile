@@ -50,6 +50,39 @@ export interface SparklinePoint {
   close: number;
 }
 
+export interface BinanceCandle {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export async function fetchCandles(
+  baseToken: string,
+  interval: string = "1m",
+  limit: number = 200
+): Promise<BinanceCandle[]> {
+  const binanceSymbol = SYMBOL_MAP[baseToken];
+  if (!binanceSymbol) return [];
+
+  const res = await fetch(
+    `${BINANCE_API_URL}/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${limit}`
+  );
+  if (!res.ok) return [];
+
+  const data: unknown[][] = await res.json();
+  return data.map((c) => ({
+    time: c[0] as number,
+    open: parseFloat(c[1] as string),
+    high: parseFloat(c[2] as string),
+    low: parseFloat(c[3] as string),
+    close: parseFloat(c[4] as string),
+    volume: parseFloat(c[5] as string),
+  }));
+}
+
 export async function fetchSparkline(
   baseToken: string
 ): Promise<SparklinePoint[]> {

@@ -922,19 +922,19 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 5.1 | Screen layout | Header with market name + price, scrollable body | Not Started |
-| 5.2 | Chart — WebView | TradingView lightweight-charts in react-native-webview | Not Started |
-| 5.3 | Chart — candle data | Fetch Binance 1m candles, pipe to WebView via postMessage | Not Started |
-| 5.4 | Chart — live updates | Stream Pyth price into chart in real-time | Not Started |
-| 5.5 | Direction picker | Up (Long) / Down (Short) toggle buttons | Not Started |
-| 5.6 | Amount input | USD amount field with 25/50/75/Max presets | Not Started |
-| 5.7 | Multiplier slider | 1-25x slider with preset buttons (1x, 5x, 10x, 25x) | Not Started |
-| 5.8 | Order summary | Position size, liquidation price, est. fee — live calculation | Not Started |
-| 5.9 | Confirmation sheet | Bottom sheet with full trade summary before execution | Not Started |
-| 5.10 | Submit market order | Build + send Anchor instruction via session key | Not Started |
-| 5.11 | Success/error toast | In-app toast on trade result | Not Started |
-| 5.12 | Safety — liq warning | Show "auto-closed if price drops X%" when setting multiplier | Not Started |
-| 5.13 | Safety — balance warning | Warning if using >50% of balance | Not Started |
+| 5.1 | Screen layout | Header with market name + price, scrollable body | Done |
+| 5.2 | Chart — WebView | TradingView lightweight-charts in react-native-webview | Done |
+| 5.3 | Chart — candle data | Fetch Binance 1m candles, pipe to WebView via postMessage | Done |
+| 5.4 | Chart — live updates | Stream Pyth price into chart in real-time | Done |
+| 5.5 | Direction picker | Up (Long) / Down (Short) toggle buttons | Done |
+| 5.6 | Amount input | USD amount field with 25/50/75/Max presets | Done |
+| 5.7 | Multiplier slider | 1-25x slider with preset buttons (1x, 5x, 10x, 25x) | Done |
+| 5.8 | Order summary | Position size, liquidation price, est. fee — live calculation | Done |
+| 5.9 | Confirmation sheet | Bottom sheet with full trade summary before execution | Done |
+| 5.10 | Submit market order | Build + send Anchor instruction via session key | Placeholder |
+| 5.11 | Success/error toast | In-app toast on trade result | Done |
+| 5.12 | Safety — liq warning | Show "auto-closed if price drops X%" when setting multiplier | Done |
+| 5.13 | Safety — balance warning | Warning if using >50% of balance | Done |
 
 ### Phase 6: Portfolio Screen
 

@@ -11,6 +11,7 @@ import * as SystemUI from "expo-system-ui";
 import { useFonts } from "expo-font";
 import { SplashScreen } from "expo-router";
 import { PrivyProvider } from "@privy-io/expo";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AuthProvider, useAuth } from "../src/providers/AuthProvider";
 import { hasSeenOnboarding } from "./onboarding";
 
@@ -98,31 +99,33 @@ export default function RootLayout() {
   }
 
   return (
-    <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID}>
-      <AuthProvider>
-        <StatusBar style="light" backgroundColor="#1A1A1A" />
-        <AuthGate>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: "#1A1A1A" },
-              animation: "slide_from_right",
-            }}
-          >
-            <Stack.Screen
-              name="auth/login"
-              options={{ animation: "fade" }}
-            />
-            <Stack.Screen
-              name="onboarding"
-              options={{ animation: "fade" }}
-            />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="trade/[market]" />
-            <Stack.Screen name="trader/[address]" />
-          </Stack>
-        </AuthGate>
-      </AuthProvider>
-    </PrivyProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID}>
+        <AuthProvider>
+          <StatusBar style="light" backgroundColor="#1A1A1A" />
+          <AuthGate>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: "#1A1A1A" },
+                animation: "slide_from_right",
+              }}
+            >
+              <Stack.Screen
+                name="auth/login"
+                options={{ animation: "fade" }}
+              />
+              <Stack.Screen
+                name="onboarding"
+                options={{ animation: "fade" }}
+              />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="trade/[market]" />
+              <Stack.Screen name="trader/[address]" />
+            </Stack>
+          </AuthGate>
+        </AuthProvider>
+      </PrivyProvider>
+    </GestureHandlerRootView>
   );
 }
