@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLoginWithEmail, useLoginWithOAuth } from "@privy-io/expo";
-import { router } from "expo-router";
 
 type Step = "choose" | "email_input" | "email_otp";
 
@@ -39,7 +38,7 @@ export default function LoginScreen() {
   const handleEmailVerify = async () => {
     try {
       await loginWithCode({ code: otp });
-      router.replace("/(tabs)");
+      // AuthGate in _layout.tsx handles redirect to (tabs)
     } catch {
       // error handled by Privy state
     }
@@ -48,7 +47,7 @@ export default function LoginScreen() {
   const handleOAuth = async (provider: "google" | "apple") => {
     try {
       await loginWithOAuth({ provider });
-      router.replace("/(tabs)");
+      // AuthGate in _layout.tsx handles redirect to (tabs)
     } catch {
       // error handled by Privy state
     }

@@ -5,17 +5,46 @@ import "../global.css";
 
 import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, router, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useFonts } from "expo-font";
 import { SplashScreen } from "expo-router";
 import { PrivyProvider } from "@privy-io/expo";
+import { AuthProvider, useAuth } from "../src/providers/AuthProvider";
 
 const PRIVY_APP_ID = "cmgs9bt9n002ol10eyp3d819s";
 const PRIVY_CLIENT_ID = "client-WY6Rd8TEFk3AsWL6b9EJ6ndUPDZLfwFrFR6MTLjgJNVyb";
 
 SplashScreen.preventAutoHideAsync();
+
+/** Redirects to login or tabs based on auth state */
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isReady, isAuthenticated } = useAuth();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    const inAuthGroup = segments[0] === "auth";
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace("/auth/login");
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [isReady, isAuthenticated, segments]);
+
+  if (!isReady) {
+    return (
+      <View className="flex-1 bg-qban-black items-center justify-center">
+        <ActivityIndicator color="#F5C518" size="large" />
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -47,19 +76,26 @@ export default function RootLayout() {
 
   return (
     <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID}>
-      <StatusBar style="light" backgroundColor="#1A1A1A" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: "#1A1A1A" },
-          animation: "slide_from_right",
-        }}
-      >
-        <Stack.Screen name="auth/login" options={{ animation: "fade" }} />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="trade/[market]" />
-        <Stack.Screen name="trader/[address]" />
-      </Stack>
+      <AuthProvider>
+        <StatusBar style="light" backgroundColor="#1A1A1A" />
+        <AuthGate>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: "#1A1A1A" },
+              animation: "slide_from_right",
+            }}
+          >
+            <Stack.Screen
+              name="auth/login"
+              options={{ animation: "fade" }}
+            />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="trade/[market]" />
+            <Stack.Screen name="trader/[address]" />
+          </Stack>
+        </AuthGate>
+      </AuthProvider>
     </PrivyProvider>
   );
 }
