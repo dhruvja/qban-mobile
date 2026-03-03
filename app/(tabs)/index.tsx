@@ -1,36 +1,15 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>QBAN</Text>
-        <Text style={styles.subtitle}>Home</Text>
+    <SafeAreaView className="flex-1 bg-qban-black">
+      <View className="flex-1 items-center justify-center">
+        <Text className="font-bebas text-5xl text-qban-yellow tracking-widest">
+          QBAN
+        </Text>
+        <Text className="text-base text-qban-smoke-dark mt-2">Home</Text>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1A1A1A",
-  },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontFamily: "BebasNeue",
-    fontSize: 48,
-    color: "#F5C518",
-    letterSpacing: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#B8B2AA",
-    marginTop: 8,
-  },
-});
