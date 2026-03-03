@@ -29,7 +29,8 @@
     },
     "scheme": "qban",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-font"
     ]
   }
 }
