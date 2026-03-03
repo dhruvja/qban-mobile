@@ -884,7 +884,7 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | 1.4 | Dark theme | Global dark theme using brand kit (qban-black, charcoal, yellow) | Done |
 | 1.5 | Custom fonts | Load Bebas Neue, Space Mono, DM Sans via expo-font | Done |
 | 1.6 | Shared types | Copy/adapt TypeScript types from perp-ui (orders, positions, market data) | Done |
-| 1.7 | API client | REST client for `tapguru.fun/api/v1/` endpoints | Not Started |
+| 1.7 | API client | REST client for `tapguru.fun/api/v1/` endpoints | Done |
 | 1.8 | WebSocket client | WS connection for orderbook + fills + price updates | Not Started |
 
 ### Phase 2: Auth & Wallet
