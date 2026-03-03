@@ -901,9 +901,9 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 3.1 | Welcome screen | "Trade SOL. Earn more." with CTA | Not Started |
-| 3.2 | Tutorial cards | 3 swipeable cards explaining Up/Down, Amount, Profit | Not Started |
-| 3.3 | Skip + remember | Tutorial only on first launch, skip button, AsyncStorage flag | Not Started |
+| 3.1 | Welcome screen | "Trade SOL. Earn more." with CTA | Done |
+| 3.2 | Tutorial cards | 3 swipeable cards explaining Up/Down, Amount, Profit | Done |
+| 3.3 | Skip + remember | Tutorial only on first launch, skip button, AsyncStorage flag | Done |
 
 ### Phase 4: Home Screen
 
