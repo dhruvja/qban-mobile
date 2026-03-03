@@ -940,14 +940,14 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 6.1 | Balance overview | Total balance, available, in positions | Not Started |
-| 6.2 | Active position card | Show direction, size, entry, current, P&L, liquidation | Not Started |
-| 6.3 | Live P&L updates | Real-time P&L from Pyth price stream | Not Started |
-| 6.4 | Close position — UI | Close 25/50/75/100% buttons | Not Started |
-| 6.5 | Close position — sheet | Bottom sheet with close summary + confirm | Not Started |
-| 6.6 | Close position — tx | Build + send close instruction | Not Started |
-| 6.7 | Trade history | List of past trades with win/loss, P&L, timestamp | Not Started |
-| 6.8 | Pull-to-refresh | Refresh position + history on pull down | Not Started |
+| 6.1 | Balance overview | Total balance, available, in positions | Done |
+| 6.2 | Active position card | Show direction, size, entry, current, P&L, liquidation | Done |
+| 6.3 | Live P&L updates | Real-time P&L from Pyth price stream | Done |
+| 6.4 | Close position — UI | Close 25/50/75/100% buttons | Done |
+| 6.5 | Close position — sheet | Bottom sheet with close summary + confirm | Done |
+| 6.6 | Close position — tx | Build + send close instruction | Placeholder |
+| 6.7 | Trade history | List of past trades with win/loss, P&L, timestamp | Done |
+| 6.8 | Pull-to-refresh | Refresh position + history on pull down | Done |
 
 ### Phase 7: Deposit & Withdraw
 
