@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 
@@ -6,34 +6,15 @@ export default function TradeScreen() {
   const { market } = useLocalSearchParams<{ market: string }>();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>{market?.toUpperCase()}</Text>
-        <Text style={styles.subtitle}>Trade screen</Text>
+    <SafeAreaView className="flex-1 bg-qban-black">
+      <View className="flex-1 items-center justify-center">
+        <Text className="font-bebas text-4xl text-qban-white tracking-wider">
+          {market?.toUpperCase()}
+        </Text>
+        <Text className="text-base text-qban-smoke-dark mt-2">
+          Trade screen
+        </Text>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1A1A1A",
-  },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#FAFAF8",
-    letterSpacing: 2,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#B8B2AA",
-    marginTop: 8,
-  },
-});
