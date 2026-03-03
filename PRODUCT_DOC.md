@@ -879,7 +879,7 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | # | Task | Description | Status |
 |---|---|---|---|
 | 1.1 | Expo project init | `npx create-expo-app` with TypeScript template | Done |
-| 1.2 | Expo Router setup | File-based routing with bottom tab layout | Not Started |
+| 1.2 | Expo Router setup | File-based routing with bottom tab layout | Done |
 | 1.3 | NativeWind config | Tailwind CSS setup with QBAN brand colors/fonts | Not Started |
 | 1.4 | Dark theme | Global dark theme using brand kit (qban-black, charcoal, yellow) | Not Started |
 | 1.5 | Custom fonts | Load Bebas Neue, Space Mono, DM Sans via expo-font | Not Started |
