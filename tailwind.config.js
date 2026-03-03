@@ -20,6 +20,7 @@ module.exports = {
           smoke: "#E8E4DF",
           "smoke-dark": "#B8B2AA",
           white: "#FAFAF8",
+          green: "#00C853",
           "green-accent": "#00C853",
           "red-accent": "#FF1744",
         },

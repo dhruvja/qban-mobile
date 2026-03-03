@@ -909,14 +909,14 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 4.1 | Balance display | Fetch + show USDC margin balance at top | Not Started |
-| 4.2 | Deposit/Withdraw buttons | Buttons linking to deposit/withdraw flows | Not Started |
-| 4.3 | Market list | Scrollable list of market cards | Not Started |
-| 4.4 | Market card — live | SOL/USD card with price, 24h change, volume | Not Started |
-| 4.5 | Market card — coming soon | ETH/USD, BTC/USD with "coming soon" badge, non-tappable | Not Started |
-| 4.6 | Mini sparkline | Small 24h price chart on each live market card | Not Started |
-| 4.7 | Pull-to-refresh | Refresh all prices on pull down | Not Started |
-| 4.8 | Pyth price feed | Port `usePythPrice` hook — live SOL/USD from Pyth oracle | Not Started |
+| 4.1 | Balance display | Fetch + show USDC margin balance at top | Done |
+| 4.2 | Deposit/Withdraw buttons | Buttons linking to deposit/withdraw flows | Done |
+| 4.3 | Market list | Scrollable list of market cards | Done |
+| 4.4 | Market card — live | SOL/USD card with price, 24h change, volume | Done |
+| 4.5 | Market card — coming soon | ETH/USD, BTC/USD with "coming soon" badge, non-tappable | Done |
+| 4.6 | Mini sparkline | Small 24h price chart on each live market card | Done |
+| 4.7 | Pull-to-refresh | Refresh all prices on pull down | Done |
+| 4.8 | Pyth price feed | Port `usePythPrice` hook — live SOL/USD from Pyth oracle | Done |
 
 ### Phase 5: Trade Screen
 
