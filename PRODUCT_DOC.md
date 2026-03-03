@@ -953,12 +953,12 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 7.1 | Deposit screen | Show wallet address + QR code for USDC transfer | Not Started |
-| 7.2 | Copy address | Tap to copy wallet address with haptic feedback | Not Started |
-| 7.3 | Deposit detection | Poll/listen for incoming USDC, update balance | Not Started |
-| 7.4 | Withdraw screen | Amount input + paste destination address | Not Started |
-| 7.5 | Withdraw confirmation | Summary bottom sheet + confirm | Not Started |
-| 7.6 | Withdraw tx | Build + send withdraw instruction | Not Started |
+| 7.1 | Deposit screen | Show wallet address + QR code for USDC transfer | Done |
+| 7.2 | Copy address | Tap to copy wallet address with haptic feedback | Done |
+| 7.3 | Deposit detection | Poll/listen for incoming USDC, update balance | Placeholder |
+| 7.4 | Withdraw screen | Amount input + paste destination address | Done |
+| 7.5 | Withdraw confirmation | Summary bottom sheet + confirm | Done |
+| 7.6 | Withdraw tx | Build + send withdraw instruction | Placeholder |
 
 ### Phase 8: Leaderboard
 

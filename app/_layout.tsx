@@ -122,6 +122,8 @@ export default function RootLayout() {
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="trade/[market]" />
               <Stack.Screen name="trader/[address]" />
+              <Stack.Screen name="deposit" />
+              <Stack.Screen name="withdraw" />
             </Stack>
           </AuthGate>
         </AuthProvider>
