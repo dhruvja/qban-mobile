@@ -9,20 +9,31 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@ethersproject/shims": "^5.8.0",
     "@expo-google-fonts/bebas-neue": "^0.4.1",
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/space-mono": "^0.4.2",
+    "@privy-io/expo": "^0.63.7",
+    "@privy-io/expo-native-extensions": "^0.0.7",
     "expo": "~55.0.4",
+    "expo-apple-authentication": "~55.0.8",
+    "expo-application": "~55.0.8",
     "expo-constants": "~55.0.7",
+    "expo-crypto": "~55.0.8",
     "expo-font": "~55.0.4",
     "expo-linking": "~55.0.7",
     "expo-router": "~55.0.3",
+    "expo-secure-store": "~55.0.8",
     "expo-status-bar": "~55.0.4",
     "expo-system-ui": "~55.0.9",
+    "expo-web-browser": "~55.0.9",
+    "fast-text-encoding": "^1.0.6",
     "react": "19.2.0",
     "react-native": "0.83.2",
+    "react-native-get-random-values": "^2.0.0",
     "react-native-safe-area-context": "~5.6.2",
-    "react-native-screens": "~4.23.0"
+    "react-native-screens": "~4.23.0",
+    "react-native-webview": "^13.16.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

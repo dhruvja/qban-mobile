@@ -1,4 +1,8 @@
+import "fast-text-encoding";
+import "react-native-get-random-values";
+import "@ethersproject/shims";
 import "../global.css";
+
 import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { Stack } from "expo-router";
@@ -6,6 +10,10 @@ import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useFonts } from "expo-font";
 import { SplashScreen } from "expo-router";
+import { PrivyProvider } from "@privy-io/expo";
+
+const PRIVY_APP_ID = "cmgs9bt9n002ol10eyp3d819s";
+const PRIVY_CLIENT_ID = "client-WY6Rd8TEFk3AsWL6b9EJ6ndUPDZLfwFrFR6MTLjgJNVyb";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -38,7 +46,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID}>
       <StatusBar style="light" backgroundColor="#1A1A1A" />
       <Stack
         screenOptions={{
@@ -51,6 +59,6 @@ export default function RootLayout() {
         <Stack.Screen name="trade/[market]" />
         <Stack.Screen name="trader/[address]" />
       </Stack>
-    </>
+    </PrivyProvider>
   );
 }

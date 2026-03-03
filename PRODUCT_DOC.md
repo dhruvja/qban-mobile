@@ -891,7 +891,7 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 2.1 | Privy SDK setup | Install & configure `@privy-io/expo` | Not Started |
+| 2.1 | Privy SDK setup | Install & configure `@privy-io/expo` | Done |
 | 2.2 | Login screen | Email / Apple / Google sign-in UI | Not Started |
 | 2.3 | Embedded wallet | Auto-create Solana wallet on signup (no seed phrase) | Not Started |
 | 2.4 | Session keys | Port 1-click trading (ephemeral keypairs) — swap IndexedDB for SecureStore | Not Started |
