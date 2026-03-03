@@ -656,7 +656,184 @@ The web app is a full trading terminal. The mobile app hides:
 
 ---
 
-## Tech Stack (Mobile)
+## UX Polish — What Makes It Feel World-Class
+
+This section defines every micro-interaction, animation, and tactile detail that separates a "good" app from one that feels **impossibly smooth**. Every item here is a must-have.
+
+### Animations & Transitions
+
+| Where | Animation | Library |
+|---|---|---|
+| Screen transitions | Shared element transitions between Home → Trade (market card morphs into trade header) | `react-native-reanimated` + Expo Router |
+| Bottom sheets | Spring-physics sheet that follows your finger, flings open/closed, snaps to detents | `@gorhom/bottom-sheet` |
+| Tab bar | Active tab icon scales up with spring bounce + label fades in | `react-native-reanimated` |
+| Market cards | Subtle press-in scale (0.97) on touch down, spring back on release | `Pressable` + `useAnimatedStyle` |
+| P&L numbers | Numbers count up/down smoothly when price changes (slot machine effect) | `react-native-reanimated` interpolation |
+| Price ticker | Color flash — green pulse on price up, red pulse on price down, fades over 400ms | Animated background color |
+| Chart load | Chart fades in from 0 opacity with slight slide-up after WebView loads | `Animated.timing` |
+| Position card | Slides in from bottom with spring when first position opens | Layout animation |
+| Trade submit | Button compresses → spinner → checkmark morph → success | Lottie or reanimated sequence |
+| Leaderboard ranks | Staggered fade-in of cards (50ms delay between each) on first load | `FlatList` + entering animation |
+| Follow button | Heart/check icon pops with scale overshoot (1.0 → 1.3 → 1.0) | Spring animation |
+| Referral copy | "Copied!" tooltip slides up, holds 1.5s, fades out | Animated translateY + opacity |
+
+### Haptic Feedback
+
+Every important touch point gets haptic feedback via `expo-haptics`:
+
+| Action | Haptic Type |
+|---|---|
+| Tap Up/Down direction | `ImpactFeedbackStyle.Medium` |
+| Slide multiplier to a preset notch | `ImpactFeedbackStyle.Light` (tick on each notch) |
+| Tap "Open Position" | `ImpactFeedbackStyle.Heavy` |
+| Trade confirmed | `NotificationFeedbackType.Success` |
+| Trade failed | `NotificationFeedbackType.Error` |
+| Pull-to-refresh hits threshold | `ImpactFeedbackStyle.Medium` |
+| Close position confirm | `ImpactFeedbackStyle.Heavy` |
+| Copy referral code | `NotificationFeedbackType.Success` |
+| Follow someone | `ImpactFeedbackStyle.Light` |
+| Long-press on position card | `ImpactFeedbackStyle.Medium` |
+
+### Gestures
+
+| Gesture | Where | Action |
+|---|---|---|
+| Swipe down | Any list screen | Pull-to-refresh with custom QBAN-yellow spinner |
+| Swipe left on position card | Portfolio | Reveals "Close" action button (like iOS mail swipe) |
+| Swipe between tabs | Leaderboard sub-tabs | Pan between Top Traders / Friends / Feed |
+| Pinch to zoom | Trade chart | Zoom in/out on price chart (handled by WebView) |
+| Long press | Market card on Home | Quick-peek bottom sheet with market stats |
+| Long press | Trader card on Leaderboard | Quick-preview of trader profile without navigating |
+| Swipe right | Trade/Profile screens | Native back navigation |
+| Double tap | Position P&L | Copies P&L value to clipboard |
+
+### Loading States
+
+**No screen should ever feel empty or frozen.** Every data-dependent view needs a loading state:
+
+| Screen | Loading State |
+|---|---|
+| Home — market cards | Skeleton cards with shimmering pulse animation (charcoal → dark-brown → charcoal) |
+| Home — balance | Skeleton rectangle for balance, shimmering |
+| Trade — chart | Skeleton chart area with faint grid lines, shimmers until WebView renders |
+| Portfolio — position | Skeleton card matching position card dimensions |
+| Portfolio — history | Skeleton rows (3-4) with shimmering |
+| Leaderboard — traders | Skeleton cards with circle (pfp) + rectangles (text) |
+| Feed | Skeleton feed items with shimmer |
+| Any data refresh | Subtle spinner at top (not blocking the existing content — show stale data while refreshing) |
+
+Skeleton shimmer colors: `qban-charcoal` (#2D2D2D) → `qban-dark-brown` (#3D2B1F) → `qban-charcoal`
+
+### Real-Time Feel
+
+The app must feel **alive**, not static:
+
+| Feature | Implementation |
+|---|---|
+| Price updates | Pyth WebSocket streams price every ~400ms. Animate number transitions smoothly, don't just swap text. |
+| P&L updates | Recalculate and animate P&L every price tick. Color intensity scales with P&L magnitude. |
+| Feed updates | New items slide in at top of feed with fade-in. Badge count on Feed tab updates in real-time. |
+| Orderbook pulse | (hidden from users but) trade activity drives a subtle "pulse" ring on the market card when volume spikes. |
+| Balance update | After deposit detected, balance counts up from old → new value (slot machine animation). |
+| Position liquidation proximity | Position card border color shifts from green → yellow → orange → red as price approaches liquidation. |
+
+### Shareable P&L Cards (FOMO-style)
+
+When a user closes a position, offer a **shareable P&L card** — a beautiful branded image they can post to Instagram/Twitter/iMessage:
+
+```
+┌──────────────────────────────────┐
+│                                  │
+│           QBAN EXCHANGE          │
+│                                  │
+│     ┌──────────────────────┐     │
+│     │                      │     │
+│     │     +$320.50         │     │
+│     │     +64.1%           │     │
+│     │                      │     │
+│     │  SOL/USD  •  UP  5x  │     │
+│     │  $142.35 → $156.80   │     │
+│     │  Held for 2h 14m     │     │
+│     │                      │     │
+│     └──────────────────────┘     │
+│                                  │
+│  @cigarking  •  qban.exchange    │
+│                                  │
+│  [Share to Stories] [Save Image] │
+│                                  │
+└──────────────────────────────────┘
+```
+
+- Auto-generated after closing a profitable position (optional for losses too)
+- Uses brand colors (yellow/black) — free marketing every time someone shares
+- Includes username and app branding
+- Share via native share sheet (Instagram Stories, Twitter, iMessage, etc.)
+- Render using `react-native-view-shot` to capture as image
+
+### Empty States
+
+Every screen needs a designed empty state — not just blank space:
+
+| Screen | Empty State |
+|---|---|
+| Portfolio — no positions | Illustration + "No positions yet. Ready to make your first trade?" + [Trade Now] button |
+| Portfolio — no history | "Your trade history will appear here after your first trade." |
+| Leaderboard — Friends tab (no follows) | "Follow traders to see them here." + [Explore Traders] button |
+| Feed — no activity | "Nothing happening yet. Be the first to trade!" |
+| Referrals — none yet | "Share your code and earn when friends trade." + [Share Code] button |
+| Deposit — zero balance | "Deposit USDC to start trading." + [Deposit] button — prominent, not subtle |
+
+### Error States
+
+Errors should feel **recoverable**, not scary:
+
+| Error | UX |
+|---|---|
+| Network offline | Persistent top banner: "You're offline. Data may be outdated." — show stale cached data, don't block the app |
+| Trade failed (tx error) | Toast with error: "Trade didn't go through. Try again." + [Retry] button |
+| Price feed stale | Subtle "(delayed)" label next to price — don't hide the price entirely |
+| WebSocket disconnected | Auto-reconnect silently. Show spinner on affected data while reconnecting. |
+| Session key expired | Auto-renew silently. If renewal fails, prompt: "Tap to re-enable 1-click trading." |
+| Deposit not detected yet | "Waiting for deposit... This usually takes under 30 seconds." + spinning animation |
+
+### Sound Design (Optional but Differentiating)
+
+Subtle, optional audio cues that can be toggled off:
+
+| Event | Sound |
+|---|---|
+| Trade confirmed | Satisfying "ka-ching" coin sound |
+| Position closed in profit | Cash register ding |
+| New follower | Soft pop notification |
+| Leaderboard rank up | Level-up chime |
+
+Toggle in settings: "Trade Sounds [on/off]"
+
+### Thumb-Zone Optimization
+
+All primary actions must be reachable with one thumb on large phones:
+
+- **Bottom tab bar**: Primary navigation always within thumb reach
+- **Trade button**: "Open Position" is at the bottom of the screen, not the top
+- **Close position buttons**: Bottom of the position card, not top
+- **Direction picker (Up/Down)**: Middle of screen, not top
+- **Multiplier presets**: Inline buttons below slider, within thumb zone
+- **Confirmation sheets**: Slide up from bottom — confirm button at the very bottom edge
+
+### Perceived Performance
+
+Even when things are loading, the app should **feel instant**:
+
+| Technique | Where |
+|---|---|
+| Optimistic updates | After submitting a trade, immediately show it in Portfolio before tx confirms. Roll back on failure. |
+| Prefetch | When user opens Trade screen, prefetch orderbook data in background for faster execution |
+| Cache-first | Show cached prices/positions on app launch, refresh silently in background |
+| Image caching | Cache PFPs with `expo-image` (built-in caching). Never re-download the same avatar. |
+| Screen preload | Preload adjacent tab screens so switching tabs is instant (no blank screen flash) |
+| Warm WebView | Initialize chart WebView on app startup (hidden), so it's ready when user opens Trade |
+
+---
 
 | Layer | Technology |
 |---|---|
@@ -669,9 +846,14 @@ The web app is a full trading terminal. The mobile app hides:
 | Blockchain | `@solana/web3.js` (via polyfills) |
 | Notifications | Expo Notifications + push server |
 | Payments | Apple Pay / Stripe via Expo |
-| Animations | `react-native-reanimated` |
+| Animations | `react-native-reanimated` 3 |
+| Bottom Sheets | `@gorhom/bottom-sheet` |
 | Styling | NativeWind (Tailwind for RN) |
 | Haptics | `expo-haptics` |
+| Images | `expo-image` (built-in caching) |
+| Skeletons | `moti/skeleton` (reanimated-powered shimmer) |
+| Screenshot/Share | `react-native-view-shot` + `expo-sharing` |
+| Gestures | `react-native-gesture-handler` |
 
 ---
 
@@ -822,16 +1004,84 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | 11.4 | Deep link handling | App opens with referral code → link referee to referrer | Not Started |
 | 11.5 | Referral tracking | Show list of referrals + status on Refer & Earn page | Not Started |
 
-### Phase 12: Settings & Polish
+### Phase 12: Settings & Account
 
 | # | Task | Description | Status |
 |---|---|---|---|
 | 12.1 | More/Account screen | Profile, funds, settings, support, legal sections | Not Started |
 | 12.2 | Sign out | Clear auth state, navigate to login | Not Started |
-| 12.3 | Haptic feedback | Add haptics on trade submit, close, follow, copy | Not Started |
-| 12.4 | Loading states | Skeleton screens for market cards, positions, leaderboard | Not Started |
-| 12.5 | Error handling | Graceful error states for network failures, tx errors | Not Started |
-| 12.6 | Cool-off prompt | "Take a break?" after 3 consecutive losses | Not Started |
+| 12.3 | Cool-off prompt | "Take a break?" after 3 consecutive losses | Not Started |
+
+### Phase 13: Animations & Micro-Interactions
+
+| # | Task | Description | Status |
+|---|---|---|---|
+| 13.1 | Shared element transitions | Market card morphs into Trade screen header on navigation | Not Started |
+| 13.2 | Bottom sheet physics | Spring-physics sheets that follow finger, snap to detents (`@gorhom/bottom-sheet`) | Not Started |
+| 13.3 | Card press animation | Subtle scale-down (0.97) on touch, spring back on release for all tappable cards | Not Started |
+| 13.4 | P&L number animation | Slot-machine count up/down effect on P&L and price changes | Not Started |
+| 13.5 | Price color flash | Green pulse on price up, red pulse on price down (400ms fade) | Not Started |
+| 13.6 | Trade submit animation | Button compresses → spinner → checkmark morph → success state | Not Started |
+| 13.7 | Tab bar animation | Active tab icon scales up with spring bounce + label fade | Not Started |
+| 13.8 | Leaderboard stagger | Cards fade in with 50ms stagger delay on first load | Not Started |
+| 13.9 | Follow button pop | Scale overshoot (1.0 → 1.3 → 1.0) on follow/unfollow | Not Started |
+| 13.10 | Balance count-up | After deposit, balance animates from old → new value | Not Started |
+| 13.11 | Position card slide-in | Spring slide-in from bottom when position first opens | Not Started |
+| 13.12 | Feed new item animation | New feed items slide in at top with fade-in | Not Started |
+
+### Phase 14: Haptics & Gestures
+
+| # | Task | Description | Status |
+|---|---|---|---|
+| 14.1 | Trade haptics | Direction pick (medium), multiplier notch (light), submit (heavy), confirm (success) | Not Started |
+| 14.2 | Position haptics | Close confirm (heavy), long-press (medium) | Not Started |
+| 14.3 | Social haptics | Follow (light), copy referral (success), new follower (light) | Not Started |
+| 14.4 | Pull-to-refresh haptic | Medium impact when refresh threshold is hit | Not Started |
+| 14.5 | Swipe-to-close position | Swipe left on position card reveals "Close" action (iOS mail-style) | Not Started |
+| 14.6 | Swipe between tabs | Pan gesture to swipe between Leaderboard sub-tabs | Not Started |
+| 14.7 | Long-press market card | Quick-peek bottom sheet with market stats | Not Started |
+| 14.8 | Long-press trader card | Quick-preview of trader profile without navigating | Not Started |
+| 14.9 | Double-tap P&L | Copies P&L value to clipboard | Not Started |
+
+### Phase 15: Loading, Empty & Error States
+
+| # | Task | Description | Status |
+|---|---|---|---|
+| 15.1 | Skeleton shimmer | Shimmer animation using brand colors (charcoal → dark-brown → charcoal) | Not Started |
+| 15.2 | Home skeletons | Skeleton cards for balance + market cards | Not Started |
+| 15.3 | Trade chart skeleton | Skeleton with faint grid lines until WebView renders | Not Started |
+| 15.4 | Portfolio skeletons | Skeleton position card + history rows | Not Started |
+| 15.5 | Leaderboard skeletons | Skeleton cards with circle (pfp) + text rectangles | Not Started |
+| 15.6 | Empty — no positions | Illustration + "Ready to make your first trade?" + CTA | Not Started |
+| 15.7 | Empty — no history | "Your trade history will appear here." | Not Started |
+| 15.8 | Empty — no friends | "Follow traders to see them here." + CTA | Not Started |
+| 15.9 | Empty — no referrals | "Share your code and earn when friends trade." + CTA | Not Started |
+| 15.10 | Error — offline banner | Persistent top banner: "You're offline" — show stale cached data | Not Started |
+| 15.11 | Error — trade failed | Toast: "Trade didn't go through. Try again." + Retry | Not Started |
+| 15.12 | Error — price stale | "(delayed)" label next to price when feed drops | Not Started |
+| 15.13 | Error — WS reconnect | Auto-reconnect silently, spinner on affected data | Not Started |
+| 15.14 | Error — session expired | Auto-renew or prompt "Tap to re-enable 1-click trading" | Not Started |
+
+### Phase 16: Perceived Performance
+
+| # | Task | Description | Status |
+|---|---|---|---|
+| 16.1 | Optimistic trade updates | Show position in Portfolio immediately before tx confirms, rollback on failure | Not Started |
+| 16.2 | Prefetch orderbook | Background fetch orderbook data when Trade screen is opened | Not Started |
+| 16.3 | Cache-first loading | Show cached prices/positions on launch, refresh silently in background | Not Started |
+| 16.4 | PFP image caching | Use `expo-image` with built-in caching for all profile pictures | Not Started |
+| 16.5 | Screen preloading | Preload adjacent tab screens so tab switching is instant | Not Started |
+| 16.6 | Warm WebView | Initialize chart WebView on app startup (hidden) so it's ready instantly | Not Started |
+
+### Phase 17: Shareable P&L Cards
+
+| # | Task | Description | Status |
+|---|---|---|---|
+| 17.1 | P&L card design | Branded card (yellow/black) with P&L, trade details, username | Not Started |
+| 17.2 | Card rendering | `react-native-view-shot` to capture card as image | Not Started |
+| 17.3 | Share sheet | Native share to Instagram Stories, Twitter, iMessage via `expo-sharing` | Not Started |
+| 17.4 | Auto-prompt | Show "Share your win?" after closing a profitable position | Not Started |
+| 17.5 | Save to camera roll | Option to save P&L card image locally | Not Started |
 
 ---
 
