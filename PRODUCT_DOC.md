@@ -964,13 +964,13 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 8.1 | Top Traders tab | Ranked list of traders by P&L | Not Started |
-| 8.2 | Trader cards | PFP, @username, P&L, trade count, bio | Not Started |
-| 8.3 | Time filter | All Time / Week / Month toggle | Not Started |
+| 8.1 | Top Traders tab | Ranked list of traders by P&L | Done |
+| 8.2 | Trader cards | PFP, @username, P&L, trade count, bio | Done |
+| 8.3 | Time filter | All Time / Week / Month toggle | Done |
 | 8.4 | Your rank footer | Sticky bottom bar showing your rank | Not Started |
-| 8.5 | Trader profile page | Tap card → full profile with stats + recent activity | Not Started |
-| 8.6 | Friends tab | List of traders you follow + their rankings | Not Started |
-| 8.7 | Feed tab | Live activity stream of all public trades | Not Started |
+| 8.5 | Trader profile page | Tap card → full profile with stats + recent activity | Done |
+| 8.6 | Friends tab | List of traders you follow + their rankings | Done |
+| 8.7 | Feed tab | Live activity stream of all public trades | Done |
 | 8.8 | Feed reactions | Emoji reactions on feed items (eyes, fire) | Not Started |
 
 ### Phase 9: User Profiles
@@ -980,7 +980,7 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | 9.1 | Profile prompt | Bottom sheet after first trade — "Set up your profile" | Not Started |
 | 9.2 | Username input | @username field with uniqueness check | Not Started |
 | 9.3 | PFP picker | Camera / photo library + crop | Not Started |
-| 9.4 | Auto-generated avatar | Fallback avatar from wallet address for skippers | Not Started |
+| 9.4 | Auto-generated avatar | Fallback avatar from wallet address for skippers | Done |
 | 9.5 | Bio field | Optional 60-char bio input | Not Started |
 | 9.6 | Profile API | Save/fetch profile to backend | Not Started |
 | 9.7 | Edit profile | Edit profile from More/Settings screen | Not Started |
@@ -989,17 +989,17 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 10.1 | Follow button | Follow/unfollow on trader cards and profile pages | Not Started |
+| 10.1 | Follow button | Follow/unfollow on trader cards and profile pages | Done |
 | 10.2 | Follow API | POST/DELETE follow, GET followers/following | Not Started |
-| 10.3 | Following list | Show who you follow in Friends tab | Not Started |
-| 10.4 | Follower count | Display follower/following counts on profiles | Not Started |
+| 10.3 | Following list | Show who you follow in Friends tab | Done |
+| 10.4 | Follower count | Display follower/following counts on profiles | Done |
 
 ### Phase 11: Referral System
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 11.1 | Generate code | Auto-generate unique referral code on signup | Not Started |
-| 11.2 | Refer & Earn page | Show code, copy button, share sheet | Not Started |
+| 11.1 | Generate code | Auto-generate unique referral code on signup | Done |
+| 11.2 | Refer & Earn page | Show code, copy button, share sheet | Done |
 | 11.3 | Share link | Native share sheet with referral URL | Not Started |
 | 11.4 | Deep link handling | App opens with referral code → link referee to referrer | Not Started |
 | 11.5 | Referral tracking | Show list of referrals + status on Refer & Earn page | Not Started |
@@ -1008,8 +1008,8 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 12.1 | More/Account screen | Profile, funds, settings, support, legal sections | Not Started |
-| 12.2 | Sign out | Clear auth state, navigate to login | Not Started |
+| 12.1 | More/Account screen | Profile, funds, settings, support, legal sections | Done |
+| 12.2 | Sign out | Clear auth state, navigate to login | Done |
 | 12.3 | Cool-off prompt | "Take a break?" after 3 consecutive losses | Not Started |
 
 ### Phase 13: Animations & Micro-Interactions
