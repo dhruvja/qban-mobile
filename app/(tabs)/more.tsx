@@ -1,7 +1,8 @@
-import { View, Text, Pressable, ScrollView, Alert, Linking } from "react-native";
+import { View, Text, Pressable, ScrollView, Alert, Linking, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { useState } from "react";
 
@@ -42,6 +43,19 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
+/** Generate a deterministic unique referral code from wallet address */
+function generateReferralCode(walletAddress: string): string {
+  // Use a simple hash of the wallet address to generate a unique-looking code
+  let hash = 0;
+  for (let i = 0; i < walletAddress.length; i++) {
+    const char = walletAddress.charCodeAt(i);
+    hash = ((hash << 5) - hash + char) | 0;
+  }
+  const num = Math.abs(hash) % 10000;
+  const prefix = walletAddress.slice(0, 3).toUpperCase();
+  return `QBAN-${prefix}${num.toString().padStart(4, "0")}`;
+}
+
 export default function MoreScreen() {
   const { walletAddress, logout } = useAuth();
   const [referralCopied, setReferralCopied] = useState(false);
@@ -50,15 +64,21 @@ export default function MoreScreen() {
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
     : "—";
 
-  // Generate a simple referral code from wallet address
   const referralCode = walletAddress
-    ? `QBAN-${walletAddress.slice(0, 6).toUpperCase()}`
+    ? generateReferralCode(walletAddress)
     : "";
 
   const handleCopyReferral = async () => {
     await Clipboard.setStringAsync(referralCode);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setReferralCopied(true);
     setTimeout(() => setReferralCopied(false), 2000);
+  };
+
+  const handleShareReferral = async () => {
+    await Share.share({
+      message: `Join me on QBAN and trade perps! Use my referral code: ${referralCode}\n\nhttps://qban.trade/ref/${referralCode}`,
+    });
   };
 
   const handleSignOut = () => {
@@ -111,11 +131,11 @@ export default function MoreScreen() {
           {/* Refer & Earn */}
           <SectionHeader title="Refer & Earn" />
           <View className="bg-qban-charcoal border border-qban-tan/10 rounded-2xl p-4 mt-2">
-            <Text className="font-dm text-sm text-qban-smoke mb-2">
+            <Text className="font-dm text-sm text-qban-smoke mb-3">
               Share your referral code and earn rewards when friends trade.
             </Text>
-            <View className="flex-row items-center justify-between">
-              <Text className="font-space text-base text-qban-yellow">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="font-space text-lg text-qban-yellow">
                 {referralCode}
               </Text>
               <Pressable
@@ -133,6 +153,14 @@ export default function MoreScreen() {
                 </Text>
               </Pressable>
             </View>
+            <Pressable
+              className="bg-qban-yellow/10 border border-qban-yellow/20 rounded-xl py-3 items-center"
+              onPress={handleShareReferral}
+            >
+              <Text className="font-dm-bold text-sm text-qban-yellow">
+                Share with Friends
+              </Text>
+            </Pressable>
           </View>
 
           {/* Settings */}

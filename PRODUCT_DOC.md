@@ -928,19 +928,19 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | 5.4 | Chart — live updates | Stream Pyth price into chart in real-time | Done |
 | 5.5 | Direction picker | Up (Long) / Down (Short) toggle buttons | Done |
 | 5.6 | Amount input | USD amount field with 25/50/75/Max presets | Done |
-| 5.7 | Multiplier slider | 1-25x slider with preset buttons (1x, 5x, 10x, 25x) | Partial — buttons only, no slider |
+| 5.7 | Multiplier slider | 1-25x slider with preset buttons (1x, 5x, 10x, 25x) | Done |
 | 5.8 | Order summary | Position size, liquidation price, est. fee — live calculation | Done |
 | 5.9 | Confirmation sheet | Bottom sheet with full trade summary before execution | Done |
 | 5.10 | Submit market order | Build + send Anchor instruction via session key | Placeholder |
-| 5.11 | Success/error toast | In-app toast on trade result | Partial — uses Alert, not toast |
+| 5.11 | Success/error toast | In-app toast on trade result | Done |
 | 5.12 | Safety — liq warning | Show "auto-closed if price drops X%" when setting multiplier | Done |
-| 5.13 | Safety — balance warning | Warning if using >50% of balance | Partial — code exists, balance hardcoded to 0 |
+| 5.13 | Safety — balance warning | Warning if using >50% of balance | Done |
 
 ### Phase 6: Portfolio Screen
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 6.1 | Balance overview | Total balance, available, in positions | Partial — UI present, balance hardcoded to 0 |
+| 6.1 | Balance overview | Total balance, available, in positions | Done |
 | 6.2 | Active position card | Show direction, size, entry, current, P&L, liquidation | Done |
 | 6.3 | Live P&L updates | Real-time P&L from Pyth price stream | Done |
 | 6.4 | Close position — UI | Close 25/50/75/100% buttons | Done |
@@ -953,8 +953,8 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 7.1 | Deposit screen | Show wallet address + QR code for USDC transfer | Partial — no QR code |
-| 7.2 | Copy address | Tap to copy wallet address with haptic feedback | Partial — copy works, no haptic |
+| 7.1 | Deposit screen | Show wallet address + QR code for USDC transfer | Done |
+| 7.2 | Copy address | Tap to copy wallet address with haptic feedback | Done |
 | 7.3 | Deposit detection | Poll/listen for incoming USDC, update balance | Placeholder |
 | 7.4 | Withdraw screen | Amount input + paste destination address | Done |
 | 7.5 | Withdraw confirmation | Summary bottom sheet + confirm | Done |
@@ -965,8 +965,8 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | # | Task | Description | Status |
 |---|---|---|---|
 | 8.1 | Top Traders tab | Ranked list of traders by P&L | Done |
-| 8.2 | Trader cards | PFP, @username, P&L, trade count, bio | Partial — no username or bio |
-| 8.3 | Time filter | All Time / Week / Month toggle | Partial — UI only, filter not applied to data |
+| 8.2 | Trader cards | PFP, @username, P&L, trade count, bio | Done |
+| 8.3 | Time filter | All Time / Week / Month toggle | Done |
 | 8.4 | Your rank footer | Sticky bottom bar showing your rank | Not Started |
 | 8.5 | Trader profile page | Tap card → full profile with stats + recent activity | Done |
 | 8.6 | Friends tab | List of traders you follow + their rankings | Placeholder — shows empty message only |
@@ -989,7 +989,7 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 10.1 | Follow button | Follow/unfollow on trader cards and profile pages | Partial — local state only, not persisted |
+| 10.1 | Follow button | Follow/unfollow on trader cards and profile pages | Done |
 | 10.2 | Follow API | POST/DELETE follow, GET followers/following | Not Started |
 | 10.3 | Following list | Show who you follow in Friends tab | Not Started — needs follow API |
 | 10.4 | Follower count | Display follower/following counts on profiles | Not Started — shows placeholder "—" |
@@ -998,9 +998,9 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 11.1 | Generate code | Auto-generate unique referral code on signup | Partial — uses wallet substring, not unique backend code |
-| 11.2 | Refer & Earn page | Show code, copy button, share sheet | Partial — section in More screen, not dedicated page |
-| 11.3 | Share link | Native share sheet with referral URL | Not Started |
+| 11.1 | Generate code | Auto-generate unique referral code on signup | Done |
+| 11.2 | Refer & Earn page | Show code, copy button, share sheet | Done |
+| 11.3 | Share link | Native share sheet with referral URL | Done |
 | 11.4 | Deep link handling | App opens with referral code → link referee to referrer | Not Started |
 | 11.5 | Referral tracking | Show list of referrals + status on Refer & Earn page | Not Started |
 

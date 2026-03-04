@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { View, Text, Pressable, Alert } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import QRCode from "react-native-qrcode-svg";
 import { useAuth } from "../src/providers/AuthProvider";
 
 export default function DepositScreen() {
@@ -12,13 +14,10 @@ export default function DepositScreen() {
   const handleCopy = async () => {
     if (!walletAddress) return;
     await Clipboard.setStringAsync(walletAddress);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const shortAddress = walletAddress
-    ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
-    : "—";
 
   return (
     <SafeAreaView className="flex-1 bg-qban-black" edges={["top"]}>
@@ -53,6 +52,20 @@ export default function DepositScreen() {
             </Text>
           </View>
         </View>
+
+        {/* QR Code */}
+        {walletAddress && (
+          <View className="items-center mb-6">
+            <View className="bg-white p-4 rounded-2xl">
+              <QRCode
+                value={walletAddress}
+                size={180}
+                backgroundColor="white"
+                color="#1A1A1A"
+              />
+            </View>
+          </View>
+        )}
 
         {/* Address Card */}
         <View className="bg-qban-charcoal border border-qban-tan/10 rounded-2xl p-5 mb-6">

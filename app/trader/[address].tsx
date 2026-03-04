@@ -8,12 +8,22 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { fetchTraderPositions, fetchTraderOrders } from "../../src/api/client";
 import { baseAtomsToSol } from "../../src/constants";
+import {
+  isFollowing as checkFollowing,
+  followTrader,
+  unfollowTrader,
+} from "../../src/services/followStorage";
 import type { UserOrder } from "../../src/types";
 
 function formatUsd(v: number): string {
   return `$${v.toFixed(2)}`;
+}
+
+function traderUsername(addr: string): string {
+  return `@${addr.slice(0, 4).toLowerCase()}${addr.slice(-4).toLowerCase()}`;
 }
 
 export default function TraderProfileScreen() {
@@ -26,6 +36,25 @@ export default function TraderProfileScreen() {
   const shortAddr = address
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
     : "—";
+
+  // Load follow state from AsyncStorage
+  useEffect(() => {
+    if (address) {
+      checkFollowing(address).then(setFollowing);
+    }
+  }, [address]);
+
+  const handleToggleFollow = async () => {
+    if (!address) return;
+    if (following) {
+      await unfollowTrader(address);
+      setFollowing(false);
+    } else {
+      await followTrader(address);
+      setFollowing(true);
+    }
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
 
   const loadData = useCallback(async () => {
     if (!address) return;
@@ -94,7 +123,10 @@ export default function TraderProfileScreen() {
               {address?.slice(0, 2).toUpperCase() ?? "?"}
             </Text>
           </View>
-          <Text className="font-space text-base text-qban-white mb-1">
+          <Text className="font-dm-bold text-base text-qban-yellow mb-0.5">
+            {address ? traderUsername(address) : "—"}
+          </Text>
+          <Text className="font-space text-sm text-qban-smoke-dark mb-1">
             {shortAddr}
           </Text>
 
@@ -124,7 +156,7 @@ export default function TraderProfileScreen() {
                 ? "bg-qban-charcoal border border-qban-tan/20"
                 : "bg-qban-yellow"
             }`}
-            onPress={() => setFollowing(!following)}
+            onPress={handleToggleFollow}
           >
             <Text
               className={`font-dm-bold text-sm ${

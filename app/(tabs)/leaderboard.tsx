@@ -19,6 +19,11 @@ function formatUsd(v: number): string {
   return `$${v.toFixed(2)}`;
 }
 
+/** Generate a deterministic @username from a wallet address */
+function traderUsername(addr: string): string {
+  return `@${addr.slice(0, 4).toLowerCase()}${addr.slice(-4).toLowerCase()}`;
+}
+
 type Tab = "top" | "friends" | "feed";
 
 const TIME_FILTERS: { label: string; value: LeaderboardPeriod }[] = [
@@ -27,80 +32,102 @@ const TIME_FILTERS: { label: string; value: LeaderboardPeriod }[] = [
   { label: "Month", value: "month" },
 ];
 
+function getPeriodCutoff(period: LeaderboardPeriod): number {
+  const now = Date.now();
+  switch (period) {
+    case "week":
+      return now - 7 * 24 * 60 * 60 * 1000;
+    case "month":
+      return now - 30 * 24 * 60 * 60 * 1000;
+    default:
+      return 0;
+  }
+}
+
 export default function LeaderboardScreen() {
   const [tab, setTab] = useState<Tab>("top");
   const [period, setPeriod] = useState<LeaderboardPeriod>("all");
-  const [traders, setTraders] = useState<LeaderboardTrader[]>([]);
+  const [allFills, setAllFills] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const { price: currentPrice } = usePythPrice();
 
-  const loadLeaderboard = useCallback(async () => {
+  const loadFills = useCallback(async () => {
     try {
       const fills = await fetchAllTraderFills("SOL/USD");
-
-      // Aggregate by trader
-      const traderMap = new Map<
-        string,
-        { volume: number; trades: number; netBase: number; netQuote: number }
-      >();
-
-      for (const fill of fills) {
-        const trader = fill.taker ?? fill.maker ?? "unknown";
-        const existing = traderMap.get(trader) ?? {
-          volume: 0,
-          trades: 0,
-          netBase: 0,
-          netQuote: 0,
-        };
-
-        const price = apiPriceToUsd(fill.price);
-        const size = baseAtomsToSol(fill.base_atoms);
-        existing.volume += size * price;
-        existing.trades += 1;
-
-        if (fill.taker_is_buy) {
-          existing.netBase += size;
-          existing.netQuote -= size * price;
-        } else {
-          existing.netBase -= size;
-          existing.netQuote += size * price;
-        }
-
-        traderMap.set(trader, existing);
-      }
-
-      // Compute P&L using current oracle price
-      const oraclePrice = currentPrice ?? 0;
-      const leaderboard: LeaderboardTrader[] = Array.from(traderMap.entries())
-        .map(([trader, data]) => ({
-          trader,
-          trades: data.trades,
-          volume: data.volume,
-          pnl: data.netQuote + data.netBase * oraclePrice,
-          rank: 0,
-          effectiveLeverage: 1,
-          entryPrice: 0,
-          side: "flat" as const,
-          positionSize: Math.abs(data.netBase),
-        }))
-        .sort((a, b) => b.pnl - a.pnl)
-        .map((t, i) => ({ ...t, rank: i + 1 }));
-
-      setTraders(leaderboard);
+      setAllFills(fills);
     } catch {
       // silently fail
     }
-  }, [currentPrice]);
+  }, []);
 
   useEffect(() => {
-    loadLeaderboard();
-  }, [loadLeaderboard]);
+    loadFills();
+  }, [loadFills]);
+
+  // Compute leaderboard from fills, applying time filter
+  const traders = useMemo(() => {
+    const cutoff = getPeriodCutoff(period);
+
+    const traderMap = new Map<
+      string,
+      { volume: number; trades: number; netBase: number; netQuote: number }
+    >();
+
+    for (const fill of allFills) {
+      // Apply time filter
+      if (fill.block_time) {
+        const fillTime = new Date(fill.block_time).getTime();
+        if (fillTime < cutoff) continue;
+      } else if (period !== "all") {
+        continue; // skip fills without timestamp when filtering
+      }
+
+      const trader = fill.taker ?? fill.maker ?? "unknown";
+      const existing = traderMap.get(trader) ?? {
+        volume: 0,
+        trades: 0,
+        netBase: 0,
+        netQuote: 0,
+      };
+
+      const price = apiPriceToUsd(fill.price);
+      const size = baseAtomsToSol(fill.base_atoms);
+      existing.volume += size * price;
+      existing.trades += 1;
+
+      if (fill.taker_is_buy) {
+        existing.netBase += size;
+        existing.netQuote -= size * price;
+      } else {
+        existing.netBase -= size;
+        existing.netQuote += size * price;
+      }
+
+      traderMap.set(trader, existing);
+    }
+
+    const oraclePrice = currentPrice ?? 0;
+    return Array.from(traderMap.entries())
+      .map(([trader, data]) => ({
+        trader,
+        trades: data.trades,
+        volume: data.volume,
+        pnl: data.netQuote + data.netBase * oraclePrice,
+        rank: 0,
+        effectiveLeverage: 1,
+        entryPrice: 0,
+        side: "flat" as const,
+        positionSize: Math.abs(data.netBase),
+      }))
+      .sort((a, b) => b.pnl - a.pnl)
+      .map((t, i) => ({ ...t, rank: i + 1 }));
+  }, [allFills, currentPrice, period]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadLeaderboard();
+    await loadFills();
     setRefreshing(false);
-  }, [loadLeaderboard]);
+  }, [loadFills]);
 
   const shortAddr = (addr: string) =>
     `${addr.slice(0, 4)}...${addr.slice(-4)}`;
@@ -200,8 +227,8 @@ export default function LeaderboardScreen() {
                       </Text>
                     </View>
                     <View>
-                      <Text className="font-dm text-sm text-qban-white">
-                        {shortAddr(item.trader)}
+                      <Text className="font-dm text-sm text-qban-yellow">
+                        {traderUsername(item.trader)}
                       </Text>
                       <Text className="font-space text-xs text-qban-smoke-dark">
                         {item.trades} trades · Vol{" "}

@@ -12,6 +12,7 @@ import { useFonts } from "expo-font";
 import { SplashScreen } from "expo-router";
 import { PrivyProvider } from "@privy-io/expo";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import Toast from "react-native-toast-message";
 import { AuthProvider, useAuth } from "../src/providers/AuthProvider";
 import { hasSeenOnboarding } from "./onboarding";
 
@@ -126,6 +127,7 @@ export default function RootLayout() {
               <Stack.Screen name="withdraw" />
             </Stack>
           </AuthGate>
+          <Toast />
         </AuthProvider>
       </PrivyProvider>
     </GestureHandlerRootView>

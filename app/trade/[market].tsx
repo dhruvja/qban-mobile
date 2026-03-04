@@ -6,18 +6,22 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import Slider from "@react-native-community/slider";
+import Toast from "react-native-toast-message";
 import { Chart } from "../../src/components/Chart";
+import { useAuth } from "../../src/providers/AuthProvider";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
+import { useUsdcBalance } from "../../src/hooks/useUsdcBalance";
 import { fetchCandles, type BinanceCandle } from "../../src/api/binance";
 import {
   DEFAULT_LEVERAGE,
   LEVERAGE_PRESETS,
   BALANCE_PRESETS,
+  MAX_LEVERAGE_NEW_USER,
 } from "../../src/constants";
 import type { CandleData } from "../../src/types";
 
@@ -35,6 +39,10 @@ type Direction = "long" | "short";
 export default function TradeScreen() {
   const { market } = useLocalSearchParams<{ market: string }>();
   const baseToken = market?.split("/")?.[0] ?? "SOL";
+
+  // ─── Auth & Balance ────────────────────────────────────────
+  const { walletAddress } = useAuth();
+  const { balance } = useUsdcBalance(walletAddress);
 
   // ─── Price ──────────────────────────────────────────────────
   const { price: pythPrice } = usePythPrice();
@@ -77,7 +85,6 @@ export default function TradeScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const amount = parseFloat(amountStr) || 0;
-  const balance = 0; // TODO: fetch from chain
   const positionSize = amount * leverage;
   const estFee = positionSize * 0.001; // 0.1% taker fee estimate
 
@@ -112,15 +119,21 @@ export default function TradeScreen() {
     setSubmitting(true);
     try {
       // TODO: Build and send Anchor instruction via session key
-      Alert.alert(
-        "Trade Submitted",
-        `${direction === "long" ? "Long" : "Short"} ${formatUsd(positionSize)} at ${leverage}x`,
-        [{ text: "OK" }]
-      );
       closeConfirmSheet();
       setAmountStr("");
+      Toast.show({
+        type: "success",
+        text1: "Trade Submitted",
+        text2: `${direction === "long" ? "Long" : "Short"} ${formatUsd(positionSize)} at ${leverage}x`,
+        visibilityTime: 3000,
+      });
     } catch {
-      Alert.alert("Trade Failed", "Please try again.");
+      Toast.show({
+        type: "error",
+        text1: "Trade Failed",
+        text2: "Please try again.",
+        visibilityTime: 3000,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -239,7 +252,7 @@ export default function TradeScreen() {
               {leverage}x
             </Text>
           </View>
-          <View className="flex-row gap-2">
+          <View className="flex-row gap-2 mb-2">
             {LEVERAGE_PRESETS.map((preset) => (
               <Pressable
                 key={preset}
@@ -262,6 +275,17 @@ export default function TradeScreen() {
               </Pressable>
             ))}
           </View>
+          <Slider
+            style={{ width: "100%", height: 36 }}
+            minimumValue={1}
+            maximumValue={MAX_LEVERAGE_NEW_USER}
+            step={1}
+            value={leverage}
+            onValueChange={setLeverage}
+            minimumTrackTintColor="#F5C518"
+            maximumTrackTintColor="#2D2D2D"
+            thumbTintColor="#F5C518"
+          />
           {/* Safety: liquidation warning */}
           {leverage > 1 && (
             <View className="bg-qban-red/10 border border-qban-red/20 rounded-lg px-3 py-2 mt-2">

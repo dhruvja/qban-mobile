@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
+import { useUsdcBalance } from "../../src/hooks/useUsdcBalance";
 import { fetchTraderPositions, fetchTraderOrders } from "../../src/api/client";
 import { apiPriceToUsd, baseAtomsToSol, CLOSE_PRESETS } from "../../src/constants";
 import type { UserOrder } from "../../src/types";
@@ -58,6 +59,7 @@ interface PositionData {
 export default function PortfolioScreen() {
   const { walletAddress } = useAuth();
   const { price: currentPrice } = usePythPrice();
+  const { balance: usdcBalance, refetch: refetchBalance } = useUsdcBalance(walletAddress);
 
   const [position, setPosition] = useState<PositionData | null>(null);
   const [orders, setOrders] = useState<UserOrder[]>([]);
@@ -104,7 +106,7 @@ export default function PortfolioScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadData();
+    await Promise.all([loadData(), refetchBalance()]);
     setRefreshing(false);
   }, [loadData]);
 
@@ -128,12 +130,12 @@ export default function PortfolioScreen() {
       : position.entryPrice + liqMove;
   }, [position]);
 
-  // Balance (placeholder)
-  const totalBalance = 0;
+  // Balance from on-chain USDC
   const inPositions = position
     ? position.sizeSol * (position.entryPrice || 0)
     : 0;
-  const available = totalBalance - inPositions;
+  const totalBalance = usdcBalance + inPositions;
+  const available = usdcBalance;
 
   // ─── Close Position Bottom Sheet ────────────────────────────
   const sheetRef = useRef<BottomSheet>(null);
