@@ -30,7 +30,8 @@
     "scheme": "qban",
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ]
   }
 }
