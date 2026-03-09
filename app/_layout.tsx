@@ -48,12 +48,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/auth/login");
-    } else if (isAuthenticated && inAuthGroup) {
-      // Just logged in — check onboarding
-      if (onboardingChecked && needsOnboarding) {
-        router.replace("/onboarding");
-      } else if (onboardingChecked) {
-        router.replace("/(tabs)");
+    } else if (isAuthenticated && inAuthGroup && (segments as string[])[1] === "login") {
+      // Just logged in from login screen — go to setup (balance check + airdrop)
+      if (onboardingChecked) {
+        router.replace("/auth/setup");
       }
     } else if (isAuthenticated && inOnboarding && onboardingChecked && !needsOnboarding) {
       router.replace("/(tabs)");
@@ -117,6 +115,10 @@ export default function RootLayout() {
                   >
                     <Stack.Screen
                       name="auth/login"
+                      options={{ animation: "fade" }}
+                    />
+                    <Stack.Screen
+                      name="auth/setup"
                       options={{ animation: "fade" }}
                     />
                     <Stack.Screen
