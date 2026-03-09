@@ -24,7 +24,6 @@ import {
 } from "../../src/solana/market-instructions";
 import { CLOSE_PRESETS, baseAtomsToSol } from "../../src/constants";
 import { fetchTraderFills } from "../../src/api/client";
-import { getMarketPda } from "../../src/solana/market-instructions";
 
 const [MARKET_ADDRESS] = getMarketPda();
 const MARKET_STR = MARKET_ADDRESS.toBase58();
