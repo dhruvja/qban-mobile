@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -24,14 +24,12 @@ import {
 } from "../../src/services/profileStorage";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
 import { useUsdcBalance } from "../../src/hooks/useUsdcBalance";
-import { fetchCandles, type BinanceCandle } from "../../src/api/binance";
 import {
   DEFAULT_LEVERAGE,
   LEVERAGE_PRESETS,
   BALANCE_PRESETS,
   MAX_LEVERAGE_NEW_USER,
 } from "../../src/constants";
-import type { CandleData } from "../../src/types";
 
 function formatUsd(v: number): string {
   return v.toLocaleString("en-US", {
@@ -56,40 +54,6 @@ export default function TradeScreen() {
   // ─── Price ──────────────────────────────────────────────────
   const { price: pythPrice } = usePythPrice();
   const currentPrice = pythPrice ?? 0;
-
-  // ─── Chart ──────────────────────────────────────────────────
-  const [candles, setCandles] = useState<CandleData[]>([]);
-
-  useEffect(() => {
-    fetchCandles(baseToken, "1m", 200)
-      .then((data) => {
-        setCandles(
-          data.map((c: BinanceCandle) => ({
-            time: c.time,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-          }))
-        );
-      })
-      .catch((err) => {
-        console.error("[Trade] Failed to fetch candles:", err);
-      });
-  }, [baseToken]);
-
-  // Build live candle from Pyth price
-  const liveCandle = useMemo<CandleData | undefined>(() => {
-    if (!currentPrice || candles.length === 0) return undefined;
-    const lastCandle = candles[candles.length - 1];
-    return {
-      time: lastCandle.time,
-      open: lastCandle.open,
-      high: Math.max(lastCandle.high, currentPrice),
-      low: Math.min(lastCandle.low, currentPrice),
-      close: currentPrice,
-    };
-  }, [currentPrice, candles]);
 
   // ─── Trade form ─────────────────────────────────────────────
   const [direction, setDirection] = useState<Direction>("long");
@@ -189,7 +153,7 @@ export default function TradeScreen() {
       >
         {/* Chart */}
         <View className="px-4 mb-4">
-          <Chart candles={candles} liveCandle={liveCandle} height={280} />
+          <Chart symbol={market} height={280} />
         </View>
 
         {/* Direction Picker */}
