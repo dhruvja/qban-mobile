@@ -15,6 +15,7 @@ import {
   isFollowing as checkFollowing,
   followTrader,
   unfollowTrader,
+  getFollowedTraders,
 } from "../../src/services/followStorage";
 import type { UserOrder } from "../../src/types";
 
@@ -32,6 +33,7 @@ export default function TraderProfileScreen() {
   const [positionSide, setPositionSide] = useState<string>("flat");
   const [refreshing, setRefreshing] = useState(false);
   const [following, setFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
 
   const shortAddr = address
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -41,6 +43,8 @@ export default function TraderProfileScreen() {
   useEffect(() => {
     if (address) {
       checkFollowing(address).then(setFollowing);
+      // Show 1 if we're following, 0 otherwise (local-only, no backend yet)
+      checkFollowing(address).then((isF) => setFollowerCount(isF ? 1 : 0));
     }
   }, [address]);
 
@@ -49,9 +53,11 @@ export default function TraderProfileScreen() {
     if (following) {
       await unfollowTrader(address);
       setFollowing(false);
+      setFollowerCount((c) => Math.max(0, c - 1));
     } else {
       await followTrader(address);
       setFollowing(true);
+      setFollowerCount((c) => c + 1);
     }
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
@@ -189,7 +195,9 @@ export default function TraderProfileScreen() {
             </Text>
           </View>
           <View className="flex-1 items-center">
-            <Text className="font-space text-lg text-qban-smoke-dark">—</Text>
+            <Text className="font-space text-lg text-qban-white">
+              {followerCount}
+            </Text>
             <Text className="font-dm text-xs text-qban-smoke-dark">
               Followers
             </Text>

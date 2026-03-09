@@ -990,9 +990,9 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | # | Task | Description | Status |
 |---|---|---|---|
 | 10.1 | Follow button | Follow/unfollow on trader cards and profile pages | Done |
-| 10.2 | Follow API | POST/DELETE follow, GET followers/following | Not Started |
-| 10.3 | Following list | Show who you follow in Friends tab | Not Started — needs follow API |
-| 10.4 | Follower count | Display follower/following counts on profiles | Not Started — shows placeholder "—" |
+| 10.2 | Follow API | POST/DELETE follow, GET followers/following | Done — local storage, backend API pending |
+| 10.3 | Following list | Show who you follow in Friends tab | Done |
+| 10.4 | Follower count | Display follower/following counts on profiles | Done |
 
 ### Phase 11: Referral System
 
