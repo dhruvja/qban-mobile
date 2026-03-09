@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -23,10 +23,29 @@ import {
   unfollowTrader,
   getFollowedTraders,
 } from "../../src/services/followStorage";
-import { FillsList } from "../../src/components/FillsList";
-
 function formatUsd(v: number): string {
   return `$${v.toFixed(2)}`;
+}
+
+function formatTime(timestamp: string | undefined): string {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatDate(timestamp: string | undefined): string {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffDays = Math.floor(
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function traderUsername(addr: string): string {
@@ -103,6 +122,21 @@ export default function TraderProfileScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Group fills by date
+  const groupedFills = useMemo(() => {
+    const groups: { date: string; items: typeof fills }[] = [];
+    let currentGroup: { date: string; items: typeof fills } | null = null;
+    for (const fill of fills) {
+      const dateStr = formatDate(fill.blockTime);
+      if (!currentGroup || currentGroup.date !== dateStr) {
+        currentGroup = { date: dateStr, items: [] };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push(fill);
+    }
+    return groups;
+  }, [fills]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -225,12 +259,71 @@ export default function TraderProfileScreen() {
           <View className="flex-row items-center my-3">
             <View className="flex-1 h-px bg-qban-charcoal" />
             <Text className="font-space text-xs text-qban-smoke-dark mx-4 uppercase tracking-widest">
-              Trade History
+              History
             </Text>
             <View className="flex-1 h-px bg-qban-charcoal" />
           </View>
 
-          <FillsList fills={fills} loading={fillsLoading} />
+          {groupedFills.length > 0 ? (
+            groupedFills.map((group) => (
+              <View key={group.date} className="mb-6">
+                <Text className="font-dm-medium text-xs text-qban-smoke-dark mb-3 uppercase tracking-wider">
+                  {group.date}
+                </Text>
+                <View className="bg-qban-charcoal/40 rounded-2xl overflow-hidden">
+                  {group.items.map((fill, index) => {
+                    const fillSizeSol = baseAtomsToSol(fill.baseAtoms);
+                    const notional = fillSizeSol * fill.price;
+                    const isLast = index === group.items.length - 1;
+                    return (
+                      <View
+                        key={`${fill.orderId}-${index}`}
+                        className={`flex-row items-center px-4 py-4 ${!isLast ? "border-b border-qban-charcoal/60" : ""}`}
+                      >
+                        {/* Arrow icon */}
+                        <Text className={`font-space text-lg font-bold mr-3.5 ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
+                          {fill.isBid ? "\u2191" : "\u2193"}
+                        </Text>
+
+                        {/* Left: label + details */}
+                        <View className="flex-1">
+                          <View className="flex-row items-center gap-2 mb-1">
+                            <Text className="font-dm-bold text-base text-qban-white">
+                              SOL
+                            </Text>
+                            <View className={`rounded-md px-2 py-0.5 ${fill.isBid ? "bg-qban-green/12" : "bg-qban-red/12"}`}>
+                              <Text className={`font-space text-[10px] font-bold tracking-wide ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
+                                {fill.isBid ? "UP" : "DOWN"}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text className="font-space text-xs text-qban-smoke-dark">
+                            {fillSizeSol.toFixed(4)} SOL @ {formatUsd(fill.price)}
+                          </Text>
+                        </View>
+
+                        {/* Right: notional + time */}
+                        <View className="items-end">
+                          <Text className="font-space text-sm text-qban-white mb-0.5">
+                            {formatUsd(notional)}
+                          </Text>
+                          <Text className="font-space text-[10px] text-qban-smoke-dark">
+                            {formatTime(fill.blockTime)}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ))
+          ) : (
+            <View className="items-center py-12">
+              <Text className="font-dm text-sm text-qban-smoke-dark">
+                No trades yet
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
