@@ -41,10 +41,10 @@ export default function SetupScreen() {
 
     // Step 1: Check platform balance
     setStep("checking_balance");
-    const marginBalance = await getMarginBalance(magicblockConnection, pubkey);
-    console.log("[setup] Margin balance:", marginBalance);
+    const position = await getMarginBalance(magicblockConnection, pubkey);
+    console.log("[setup] Margin balance:", position?.marginUsd ?? 0);
 
-    if (marginBalance > 0) {
+    if (position && position.marginUsd > 0) {
       setStep("done");
       router.replace("/(tabs)");
       return;

@@ -18,6 +18,7 @@ import AnimatedPressable from "../../src/components/AnimatedPressable";
 import { SkeletonMarketCard, SkeletonBalance } from "../../src/components/Skeleton";
 import { MARKETS } from "../../src/constants";
 import { useAuth } from "../../src/providers/AuthProvider";
+import { useMarginBalance } from "../../src/hooks/useMarginBalance";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
 import {
   fetchTicker24h,
@@ -119,6 +120,7 @@ function Sparkline({
 
 export default function HomeScreen() {
   const { walletAddress } = useAuth();
+  const { marginUsd, loading: balanceLoading, refresh: refreshBalance } = useMarginBalance();
   const { price: pythPrice } = usePythPrice();
   const [tickers, setTickers] = useState<Record<string, MarketTicker>>({});
   const [sparklines, setSparklines] = useState<
@@ -165,9 +167,9 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadMarketData();
+    await Promise.all([loadMarketData(), refreshBalance()]);
     setRefreshing(false);
-  }, [loadMarketData]);
+  }, [loadMarketData, refreshBalance]);
 
   // Use Pyth price for SOL if available, otherwise fall back to Binance
   const getSolPrice = (): number | null => {
@@ -207,7 +209,7 @@ export default function HomeScreen() {
             Your Balance
           </Text>
           <Text className="font-bebas text-5xl text-qban-white tracking-wider">
-            $0.00
+            {balanceLoading ? "..." : `$${marginUsd.toFixed(2)}`}
           </Text>
 
           <View className="flex-row gap-3 mt-5">

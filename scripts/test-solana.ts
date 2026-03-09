@@ -97,9 +97,12 @@ async function runTests() {
   }
 
   try {
-    const margin = await getMarginBalance(MAGICBLOCK, TEST_WALLET);
-    assert("getMarginBalance returns number", typeof margin === "number");
-    console.log(`  Margin balance: ${margin} USDC`);
+    const position = await getMarginBalance(MAGICBLOCK, TEST_WALLET);
+    assert("getMarginBalance returns PerpsPosition or null", position === null || typeof position.marginUsd === "number");
+    console.log(`  Margin balance: ${position?.marginUsd ?? 0} USDC`);
+    if (position) {
+      console.log(`  Position: ${position.positionBase} base (${position.direction})`);
+    }
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     assert("getMarginBalance executes without crash", false, msg);
