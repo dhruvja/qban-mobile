@@ -61,15 +61,19 @@ function PriceFlash({ price, className }: { price: number | null; className?: st
     prevPrice.current = price;
   }, [price]);
 
-  const flashStyle = useAnimatedStyle(() => ({
-    backgroundColor:
+  const flashStyle = useAnimatedStyle(() => {
+    const alpha = Math.round(Math.max(0, flashOpacity.value) * 0.3 * 255);
+    const bg =
       flashColor.current === "green"
-        ? `rgba(22, 199, 132, ${flashOpacity.value * 0.3})`
-        : `rgba(234, 57, 67, ${flashOpacity.value * 0.3})`,
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  }));
+        ? `rgba(22, 199, 132, ${alpha / 255})`
+        : `rgba(234, 57, 67, ${alpha / 255})`;
+    return {
+      backgroundColor: alpha === 0 ? "transparent" : bg,
+      borderRadius: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+    };
+  });
 
   return (
     <Animated.View style={flashStyle}>
