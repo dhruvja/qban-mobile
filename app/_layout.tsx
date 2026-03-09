@@ -16,8 +16,8 @@ import { UnifiedWalletProvider } from "../src/providers/UnifiedWalletProvider";
 import { AuthProvider, useAuth } from "../src/providers/AuthProvider";
 import { hasSeenOnboarding } from "./onboarding";
 
-const PRIVY_APP_ID = "cmgs9bt9n002ol10eyp3d819s";
-const PRIVY_CLIENT_ID = "client-WY6Rd8TEFk3AsWL6b9EJ6ndUPDZLfwFrFR6MTLjgJNVyb";
+const PRIVY_APP_ID = "cmmiuozr8001a0clagz52qgs5";
+const PRIVY_CLIENT_ID = "client-WY6Wtwo3ixFad1MY5VAcvgFuczDd24n4EJrRbjQDfAvCx";
 
 SplashScreen.preventAutoHideAsync();
 
