@@ -268,7 +268,7 @@ export default function HomeScreen() {
                   scaleDown={isLive ? 0.97 : 1}
                   onPress={() => {
                     if (isLive) {
-                      router.push(`/trade/${market.symbol}` as never);
+                      router.push(`/trade/${encodeURIComponent(market.symbol)}` as never);
                     }
                   }}
                   disabled={!isLive}

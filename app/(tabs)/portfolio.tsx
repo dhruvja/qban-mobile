@@ -337,7 +337,7 @@ export default function PortfolioScreen() {
               </Text>
               <Pressable
                 className="bg-qban-yellow rounded-xl px-6 py-3 active:opacity-80"
-                onPress={() => router.push("/trade/SOL/USD" as never)}
+                onPress={() => router.push(`/trade/${encodeURIComponent("SOL/USD")}` as never)}
               >
                 <Text className="font-dm-bold text-sm text-qban-black">
                   Trade Now
