@@ -46,12 +46,13 @@ export default function LoginScreen() {
 
   const handleEmailVerify = async () => {
     try {
-      await loginWithCode({ code: otp });
+      await loginWithCode({ code: otp, email });
     } catch (err) {
+      console.error("[login] OTP verify error:", err);
       Toast.show({
         type: "error",
         text1: "Invalid code",
-        text2: "Please check and try again.",
+        text2: err instanceof Error ? err.message : "Please check and try again.",
         visibilityTime: 3000,
       });
     }
