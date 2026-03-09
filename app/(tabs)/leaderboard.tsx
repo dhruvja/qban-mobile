@@ -44,6 +44,7 @@ function timeAgo(ts: number): string {
 
 type Tab = "top" | "friends" | "feed";
 type Period = "all" | "week" | "month";
+type SortBy = "volume" | "pnl";
 
 const TIME_FILTERS: { label: string; value: Period }[] = [
   { label: "All", value: "all" },
@@ -54,6 +55,7 @@ const TIME_FILTERS: { label: string; value: Period }[] = [
 export default function LeaderboardScreen() {
   const [tab, setTab] = useState<Tab>("top");
   const [period, setPeriod] = useState<Period>("all");
+  const [sortBy, setSortBy] = useState<SortBy>("volume");
   const [refreshing, setRefreshing] = useState(false);
   const { walletAddress } = useAuth();
 
@@ -117,16 +119,35 @@ export default function LeaderboardScreen() {
     }
   }, [tab, loadFollows, loadFeed]);
 
+  const sortEntries = useCallback(
+    (items: LeaderboardEntry[]) => {
+      const sorted = [...items].sort((a, b) => {
+        if (sortBy === "pnl") return b.realized_pnl - a.realized_pnl;
+        return (
+          parseFloat(b.volume_quote || "0") -
+          parseFloat(a.volume_quote || "0")
+        );
+      });
+      return sorted.map((e, i) => ({ ...e, rank: i + 1 }));
+    },
+    [sortBy]
+  );
+
+  const sortedEntries = useMemo(
+    () => sortEntries(entries),
+    [entries, sortEntries]
+  );
+
   const friendEntries = useMemo(() => {
     if (followedAddresses.length === 0) return [];
     const followSet = new Set(followedAddresses);
-    return entries.filter((e) => followSet.has(e.address));
-  }, [entries, followedAddresses]);
+    return sortEntries(entries.filter((e) => followSet.has(e.address)));
+  }, [entries, followedAddresses, sortEntries]);
 
   const myRank = useMemo(() => {
     if (!walletAddress) return null;
-    return entries.find((e) => e.address === walletAddress) ?? null;
-  }, [entries, walletAddress]);
+    return sortedEntries.find((e) => e.address === walletAddress) ?? null;
+  }, [sortedEntries, walletAddress]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -358,33 +379,58 @@ export default function LeaderboardScreen() {
 
       {tab === "top" && (
         <>
-          {/* Time filter */}
-          <View className="flex-row px-6 mb-3 gap-2">
-            {TIME_FILTERS.map((f) => (
-              <Pressable
-                key={f.value}
-                className={`rounded-full px-3 py-1 border ${
-                  period === f.value
-                    ? "border-qban-yellow bg-qban-yellow/10"
-                    : "border-qban-charcoal"
-                }`}
-                onPress={() => setPeriod(f.value)}
-              >
-                <Text
-                  className={`font-space text-xs ${
+          {/* Time filter + Sort */}
+          <View className="flex-row items-center justify-between px-6 mb-3">
+            <View className="flex-row gap-2">
+              {TIME_FILTERS.map((f) => (
+                <Pressable
+                  key={f.value}
+                  className={`rounded-full px-3 py-1 border ${
                     period === f.value
-                      ? "text-qban-yellow"
-                      : "text-qban-smoke-dark"
+                      ? "border-qban-yellow bg-qban-yellow/10"
+                      : "border-qban-charcoal"
                   }`}
+                  onPress={() => setPeriod(f.value)}
                 >
-                  {f.label}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    className={`font-space text-xs ${
+                      period === f.value
+                        ? "text-qban-yellow"
+                        : "text-qban-smoke-dark"
+                    }`}
+                  >
+                    {f.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <View className="flex-row gap-1">
+              {(["volume", "pnl"] as SortBy[]).map((s) => (
+                <Pressable
+                  key={s}
+                  className={`rounded-full px-2.5 py-1 ${
+                    sortBy === s
+                      ? "bg-qban-charcoal"
+                      : ""
+                  }`}
+                  onPress={() => setSortBy(s)}
+                >
+                  <Text
+                    className={`font-space text-xs ${
+                      sortBy === s
+                        ? "text-qban-white"
+                        : "text-qban-smoke-dark"
+                    }`}
+                  >
+                    {s === "volume" ? "Vol" : "PnL"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
           <FlatList
-            data={entries}
+            data={sortedEntries}
             keyExtractor={(item) => item.address}
             refreshControl={
               <RefreshControl
