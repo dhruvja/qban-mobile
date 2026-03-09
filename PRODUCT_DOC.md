@@ -1017,14 +1017,14 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | # | Task | Description | Status |
 |---|---|---|---|
 | 13.1 | Shared element transitions | Market card morphs into Trade screen header on navigation | Not Started |
-| 13.2 | Bottom sheet physics | Spring-physics sheets that follow finger, snap to detents (`@gorhom/bottom-sheet`) | Not Started |
+| 13.2 | Bottom sheet physics | Spring-physics sheets that follow finger, snap to detents (`@gorhom/bottom-sheet`) | Done |
 | 13.3 | Card press animation | Subtle scale-down (0.97) on touch, spring back on release for all tappable cards | Done |
 | 13.4 | P&L number animation | Slot-machine count up/down effect on P&L and price changes | Not Started |
 | 13.5 | Price color flash | Green pulse on price up, red pulse on price down (400ms fade) | Done |
 | 13.6 | Trade submit animation | Button compresses → spinner → checkmark morph → success state | Not Started |
 | 13.7 | Tab bar animation | Active tab icon scales up with spring bounce + label fade | Not Started |
 | 13.8 | Leaderboard stagger | Cards fade in with 50ms stagger delay on first load | Done |
-| 13.9 | Follow button pop | Scale overshoot (1.0 → 1.3 → 1.0) on follow/unfollow | Not Started |
+| 13.9 | Follow button pop | Scale overshoot (1.0 → 1.3 → 1.0) on follow/unfollow | Done |
 | 13.10 | Balance count-up | After deposit, balance animates from old → new value | Not Started |
 | 13.11 | Position card slide-in | Spring slide-in from bottom when position first opens | Not Started |
 | 13.12 | Feed new item animation | New feed items slide in at top with fade-in | Not Started |

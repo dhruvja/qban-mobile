@@ -6,6 +6,12 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withSpring,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -34,6 +40,10 @@ export default function TraderProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+  const followScale = useSharedValue(1);
+  const followAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: followScale.value }],
+  }));
 
   const shortAddr = address
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -59,6 +69,10 @@ export default function TraderProfileScreen() {
       setFollowing(true);
       setFollowerCount((c) => c + 1);
     }
+    followScale.value = withSequence(
+      withSpring(1.3, { damping: 8, stiffness: 300 }),
+      withSpring(1, { damping: 10, stiffness: 200 })
+    );
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
@@ -156,22 +170,24 @@ export default function TraderProfileScreen() {
             </View>
           )}
 
-          <Pressable
-            className={`mt-4 rounded-xl px-8 py-2.5 ${
-              following
-                ? "bg-qban-charcoal border border-qban-tan/20"
-                : "bg-qban-yellow"
-            }`}
-            onPress={handleToggleFollow}
-          >
-            <Text
-              className={`font-dm-bold text-sm ${
-                following ? "text-qban-smoke" : "text-qban-black"
+          <Animated.View style={followAnimStyle}>
+            <Pressable
+              className={`mt-4 rounded-xl px-8 py-2.5 ${
+                following
+                  ? "bg-qban-charcoal border border-qban-tan/20"
+                  : "bg-qban-yellow"
               }`}
+              onPress={handleToggleFollow}
             >
-              {following ? "Following" : "Follow"}
-            </Text>
-          </Pressable>
+              <Text
+                className={`font-dm-bold text-sm ${
+                  following ? "text-qban-smoke" : "text-qban-black"
+                }`}
+              >
+                {following ? "Following" : "Follow"}
+              </Text>
+            </Pressable>
+          </Animated.View>
         </View>
 
         {/* Stats */}
