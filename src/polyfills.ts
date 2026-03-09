@@ -11,6 +11,12 @@ if (typeof global !== "undefined" && (global as Record<string, unknown>).crypto)
   (global as Record<string, unknown>).crypto = {} as Crypto;
 }
 
+// Mark as secure context for Solana Mobile Wallet Adapter
+// MWA checks window.isSecureContext which is undefined in React Native
+if (typeof window !== "undefined" && (window as Record<string, unknown>).isSecureContext === undefined) {
+  (window as Record<string, unknown>).isSecureContext = true;
+}
+
 // Some RN environments have global !== globalThis
 if (typeof globalThis !== "undefined" && !(globalThis as Record<string, unknown>).crypto) {
   console.log("[polyfill] Setting globalThis.crypto = global.crypto");
