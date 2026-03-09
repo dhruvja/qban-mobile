@@ -1047,11 +1047,11 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 15.1 | Skeleton shimmer | Shimmer animation using brand colors (charcoal → dark-brown → charcoal) | Not Started |
-| 15.2 | Home skeletons | Skeleton cards for balance + market cards | Not Started |
+| 15.1 | Skeleton shimmer | Shimmer animation using brand colors (charcoal → dark-brown → charcoal) | Done |
+| 15.2 | Home skeletons | Skeleton cards for balance + market cards | Done |
 | 15.3 | Trade chart skeleton | Skeleton with faint grid lines until WebView renders | Not Started |
-| 15.4 | Portfolio skeletons | Skeleton position card + history rows | Not Started |
-| 15.5 | Leaderboard skeletons | Skeleton cards with circle (pfp) + text rectangles | Not Started |
+| 15.4 | Portfolio skeletons | Skeleton position card + history rows | Done |
+| 15.5 | Leaderboard skeletons | Skeleton cards with circle (pfp) + text rectangles | Done |
 | 15.6 | Empty — no positions | Illustration + "Ready to make your first trade?" + CTA | Not Started |
 | 15.7 | Empty — no history | "Your trade history will appear here." | Not Started |
 | 15.8 | Empty — no friends | "Follow traders to see them here." + CTA | Not Started |

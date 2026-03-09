@@ -15,6 +15,7 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import AnimatedPressable from "../../src/components/AnimatedPressable";
+import { SkeletonMarketCard, SkeletonBalance } from "../../src/components/Skeleton";
 import { MARKETS } from "../../src/constants";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
@@ -120,6 +121,7 @@ export default function HomeScreen() {
     Record<string, SparklinePoint[]>
   >({});
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const loadMarketData = useCallback(async () => {
     const tickerResults = await Promise.allSettled(
@@ -154,7 +156,7 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    loadMarketData();
+    loadMarketData().finally(() => setInitialLoading(false));
   }, [loadMarketData]);
 
   const onRefresh = useCallback(async () => {
@@ -234,6 +236,13 @@ export default function HomeScreen() {
             <View className="flex-1 h-px bg-qban-charcoal" />
           </View>
 
+          {initialLoading ? (
+            <View className="gap-3">
+              <SkeletonMarketCard />
+              <SkeletonMarketCard />
+              <SkeletonMarketCard />
+            </View>
+          ) : (
           <View className="gap-3">
             {MARKETS.map((market) => {
               const ticker = tickers[market.baseToken];
@@ -307,6 +316,7 @@ export default function HomeScreen() {
               );
             })}
           </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

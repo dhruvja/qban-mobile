@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { SkeletonRow } from "../../src/components/Skeleton";
 import { router } from "expo-router";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
 import { useAuth } from "../../src/providers/AuthProvider";
@@ -72,6 +73,7 @@ export default function LeaderboardScreen() {
   const [period, setPeriod] = useState<LeaderboardPeriod>("all");
   const [allFills, setAllFills] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const { price: currentPrice } = usePythPrice();
   const { walletAddress } = useAuth();
 
@@ -94,8 +96,7 @@ export default function LeaderboardScreen() {
   }, []);
 
   useEffect(() => {
-    loadFills();
-    loadFollows();
+    Promise.all([loadFills(), loadFollows()]).finally(() => setInitialLoading(false));
   }, [loadFills, loadFollows]);
 
   // Reload follows when switching to Friends tab
@@ -344,11 +345,19 @@ export default function LeaderboardScreen() {
               </Animated.View>
             )}
             ListEmptyComponent={
-              <View className="items-center py-12">
-                <Text className="font-dm text-sm text-qban-smoke-dark">
-                  No traders yet
-                </Text>
-              </View>
+              initialLoading ? (
+                <View className="px-0">
+                  {[...Array(6)].map((_, i) => (
+                    <SkeletonRow key={i} />
+                  ))}
+                </View>
+              ) : (
+                <View className="items-center py-12">
+                  <Text className="font-dm text-sm text-qban-smoke-dark">
+                    No traders yet
+                  </Text>
+                </View>
+              )
             }
           />
         </>
