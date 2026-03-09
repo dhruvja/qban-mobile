@@ -1,82 +1,89 @@
-import { useRef, useCallback, useEffect, useMemo } from "react";
-import { View } from "react-native";
+import { useRef, useCallback, useEffect, useState } from "react";
+import { View, Text } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import type { CandleData } from "../types";
 import { LIGHTWEIGHT_CHARTS_JS } from "./chartLib";
 
-function buildChartHtml(): string {
-  return `<!DOCTYPE html>
+const CHART_HTML = `<!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#1A1A1A; overflow:hidden; }
+    html, body { background:#1A1A1A; overflow:hidden; width:100%; height:100%; }
     #chart { width:100%; height:100%; }
+    #debug { position:fixed; top:0; left:0; color:#F5C518; font-size:10px; font-family:monospace; z-index:9999; padding:2px 4px; background:rgba(0,0,0,0.7); }
   </style>
 </head>
 <body>
   <div id="chart"></div>
-  <script>${LIGHTWEIGHT_CHARTS_JS}</script>
+  <div id="debug">loading...</div>
+  <script>
+    var dbg = document.getElementById('debug');
+    function log(msg) {
+      dbg.textContent = msg;
+      window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({type:'log',msg:msg}));
+    }
+    log('script start');
+  </script>
+  <script>LW_PLACEHOLDER</script>
   <script>
     try {
-      var chart = LightweightCharts.createChart(document.getElementById('chart'), {
-        layout: {
-          background: { color: '#1A1A1A' },
-          textColor: '#B8B2AA',
-          fontSize: 11,
-        },
-        grid: {
-          vertLines: { color: '#2D2D2D' },
-          horzLines: { color: '#2D2D2D' },
-        },
-        crosshair: {
-          mode: LightweightCharts.CrosshairMode.Normal,
-          vertLine: { color: '#F5C518', labelBackgroundColor: '#F5C518' },
-          horzLine: { color: '#F5C518', labelBackgroundColor: '#F5C518' },
-        },
-        rightPriceScale: { borderColor: '#2D2D2D' },
-        timeScale: {
-          borderColor: '#2D2D2D',
-          timeVisible: true,
-          secondsVisible: false,
-        },
-        handleScroll: { vertTouchDrag: false },
-      });
+      if (typeof LightweightCharts === 'undefined') {
+        log('ERROR: LightweightCharts not defined');
+      } else {
+        log('lib loaded, creating chart...');
+        var chart = LightweightCharts.createChart(document.getElementById('chart'), {
+          width: document.body.clientWidth,
+          height: document.body.clientHeight,
+          layout: {
+            background: { color: '#1A1A1A' },
+            textColor: '#B8B2AA',
+            fontSize: 11,
+          },
+          grid: {
+            vertLines: { color: '#2D2D2D' },
+            horzLines: { color: '#2D2D2D' },
+          },
+          rightPriceScale: { borderColor: '#2D2D2D' },
+          timeScale: {
+            borderColor: '#2D2D2D',
+            timeVisible: true,
+            secondsVisible: false,
+          },
+          handleScroll: { vertTouchDrag: false },
+        });
 
-      var candleSeries = chart.addCandlestickSeries({
-        upColor: '#00C853',
-        downColor: '#CC2936',
-        borderUpColor: '#00C853',
-        borderDownColor: '#CC2936',
-        wickUpColor: '#00C853',
-        wickDownColor: '#CC2936',
-      });
+        var candleSeries = chart.addCandlestickSeries({
+          upColor: '#00C853',
+          downColor: '#CC2936',
+          borderUpColor: '#00C853',
+          borderDownColor: '#CC2936',
+          wickUpColor: '#00C853',
+          wickDownColor: '#CC2936',
+        });
 
-      chart.timeScale().fitContent();
+        window.setCandles = function(data) {
+          log('setCandles: ' + data.length + ' candles');
+          candleSeries.setData(data);
+          chart.timeScale().fitContent();
+        };
 
-      window.setCandles = function(data) {
-        candleSeries.setData(data);
+        window.updateCandle = function(data) {
+          candleSeries.update(data);
+        };
+
         chart.timeScale().fitContent();
-      };
-
-      window.updateCandle = function(data) {
-        candleSeries.update(data);
-      };
-
-      new ResizeObserver(function() {
-        chart.applyOptions({ width: document.body.clientWidth });
-      }).observe(document.body);
-
-      window.ReactNativeWebView.postMessage('ready');
+        log('chart ready, waiting for data...');
+        window.ReactNativeWebView.postMessage(JSON.stringify({type:'ready'}));
+      }
     } catch(e) {
-      document.body.innerHTML = '<p style="color:#CC2936;padding:20px;font-family:monospace">Chart error: ' + e.message + '</p>';
-      window.ReactNativeWebView.postMessage('error:' + e.message);
+      log('ERROR: ' + e.message);
+      window.ReactNativeWebView.postMessage(JSON.stringify({type:'error',msg:e.message}));
     }
   </script>
 </body>
 </html>`;
-}
 
 interface ChartProps {
   candles: CandleData[];
@@ -84,7 +91,7 @@ interface ChartProps {
   height?: number;
 }
 
-function formatCandlesForChart(candles: CandleData[]) {
+function formatCandles(candles: CandleData[]) {
   return candles.map((c) => ({
     time: Math.floor(c.time / 1000),
     open: c.open,
@@ -99,68 +106,92 @@ export function Chart({ candles, liveCandle, height = 280 }: ChartProps) {
   const isReady = useRef(false);
   const candlesRef = useRef(candles);
   candlesRef.current = candles;
+  const [debugMsg, setDebugMsg] = useState("initializing...");
 
-  const html = useMemo(() => buildChartHtml(), []);
+  // Build HTML with inlined library — avoid String.replace to prevent $ substitution issues
+  const [html] = useState(() => {
+    const parts = CHART_HTML.split("LW_PLACEHOLDER");
+    return parts[0] + LIGHTWEIGHT_CHARTS_JS + parts[1];
+  });
 
   const inject = useCallback((js: string) => {
     webViewRef.current?.injectJavaScript(js + ";true;");
   }, []);
 
-  const sendCandlesToChart = useCallback(
+  const sendCandles = useCallback(
     (data: CandleData[]) => {
-      const json = JSON.stringify(formatCandlesForChart(data));
+      const json = JSON.stringify(formatCandles(data));
       inject(`window.setCandles(${json})`);
     },
     [inject]
   );
 
-  // WebView signals ready — send candles if available
   const onMessage = useCallback(
     (event: WebViewMessageEvent) => {
-      if (event.nativeEvent.data === "ready") {
-        isReady.current = true;
-        if (candlesRef.current.length > 0) {
-          sendCandlesToChart(candlesRef.current);
+      try {
+        const msg = JSON.parse(event.nativeEvent.data);
+        if (msg.type === "ready") {
+          setDebugMsg("ready, sending " + candlesRef.current.length + " candles");
+          isReady.current = true;
+          if (candlesRef.current.length > 0) {
+            sendCandles(candlesRef.current);
+          }
+        } else if (msg.type === "log") {
+          setDebugMsg(msg.msg);
+        } else if (msg.type === "error") {
+          setDebugMsg("ERROR: " + msg.msg);
         }
+      } catch {
+        // raw string message
+        setDebugMsg(event.nativeEvent.data);
       }
     },
-    [sendCandlesToChart]
+    [sendCandles]
   );
 
-  // When candles prop changes after WebView is already ready
+  // When candles arrive after WebView is ready
   useEffect(() => {
     if (isReady.current && candles.length > 0) {
-      sendCandlesToChart(candles);
+      setDebugMsg("sending " + candles.length + " candles");
+      sendCandles(candles);
     }
-  }, [candles, sendCandlesToChart]);
+  }, [candles, sendCandles]);
 
-  // Stream live candle updates
+  // Live candle updates
   useEffect(() => {
     if (isReady.current && liveCandle) {
-      const data = JSON.stringify({
-        time: Math.floor(liveCandle.time / 1000),
-        open: liveCandle.open,
-        high: liveCandle.high,
-        low: liveCandle.low,
-        close: liveCandle.close,
-      });
-      inject(`window.updateCandle(${data})`);
+      inject(
+        `window.updateCandle(${JSON.stringify({
+          time: Math.floor(liveCandle.time / 1000),
+          open: liveCandle.open,
+          high: liveCandle.high,
+          low: liveCandle.low,
+          close: liveCandle.close,
+        })})`
+      );
     }
   }, [liveCandle, inject]);
 
   return (
-    <View style={{ height }} className="bg-qban-black rounded-xl overflow-hidden">
-      <WebView
-        ref={webViewRef}
-        source={{ html }}
-        onMessage={onMessage}
-        scrollEnabled={false}
-        bounces={false}
-        javaScriptEnabled
-        domStorageEnabled
-        originWhitelist={["*"]}
-        style={{ backgroundColor: "#1A1A1A" }}
-      />
+    <View style={{ height }}>
+      <Text style={{ color: "#F5C518", fontSize: 10, fontFamily: "monospace", paddingHorizontal: 4, paddingVertical: 2 }}>
+        chart: {debugMsg}
+      </Text>
+      <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", backgroundColor: "#1A1A1A" }}>
+        <WebView
+          ref={webViewRef}
+          source={{ html }}
+          onMessage={onMessage}
+          onError={(e) => setDebugMsg("WebView error: " + e.nativeEvent.description)}
+          onHttpError={(e) => setDebugMsg("HTTP error: " + e.nativeEvent.statusCode)}
+          scrollEnabled={false}
+          bounces={false}
+          javaScriptEnabled
+          domStorageEnabled
+          originWhitelist={["*"]}
+          style={{ flex: 1, backgroundColor: "#1A1A1A" }}
+        />
+      </View>
     </View>
   );
 }
