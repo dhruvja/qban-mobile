@@ -1091,10 +1091,10 @@ This phase replaces the placeholder tasks (5.10, 6.6, 7.3, 7.6) with real on-cha
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 18.1 | Solana Mobile Wallet Adapter setup | Install `@solana-mobile/mobile-wallet-adapter-protocol-web3js`, polyfills (`buffer`, `react-native-get-random-values`), create `ConnectionProvider` + `AuthorizationProvider` | Not Started |
-| 18.2 | Sign-in screen | New auth screen with two options: (1) Connect wallet via Solana Mobile Wallet Adapter (Phantom/Solflare), (2) Sign in with Privy (email/social). Replace current Privy-only login | Not Started |
-| 18.3 | Unified wallet provider | Create `useUnifiedWallet()` hook that abstracts over MWA and Privy wallets — returns `{ publicKey, connected, signTransaction, sendTransaction }`. Port from `perp-ui/unified-wallet-provider.tsx` | Not Started |
-| 18.4 | Dual connection setup | Set up both `devnetConnection` (Solana devnet) and `magicblockConnection` (MagicBlock devnet) — port from `perp-ui/connection-context.tsx` | Not Started |
+| 18.1 | Solana Mobile Wallet Adapter setup | Install `@solana-mobile/mobile-wallet-adapter-protocol-web3js`, polyfills (`buffer`, `react-native-get-random-values`), create `ConnectionProvider` + `AuthorizationProvider` | Done |
+| 18.2 | Sign-in screen | New auth screen with two options: (1) Connect wallet via Solana Mobile Wallet Adapter (Phantom/Solflare), (2) Sign in with Privy (email/social). Replace current Privy-only login | Done |
+| 18.3 | Unified wallet provider | Create `useUnifiedWallet()` hook that abstracts over MWA and Privy wallets — returns `{ publicKey, connected, signTransaction, sendTransaction }`. Port from `perp-ui/unified-wallet-provider.tsx` | Done |
+| 18.4 | Dual connection setup | Set up both `devnetConnection` (Solana devnet) and `magicblockConnection` (MagicBlock devnet) — port from `perp-ui/connection-context.tsx` | Done |
 | 18.5 | Token balance check | On login, fetch wallet USDC token balance (ATA of `5PcHLtca749zFDf9WA9RBo8QbbrtQBuHx9TSGKMiThCe`). Port logic from `perp-ui/deposit-button.tsx` | Not Started |
 | 18.6 | Platform balance check | Fetch on-chain margin balance via `getMarginBalance()` from MagicBlock. Port from `perp-ui/market-instructions.ts` | Not Started |
 | 18.7 | Auto-airdrop flow | If both platform and wallet balances are zero, airdrop 100 USDC using mint authority keypair. Port from `perp-ui/deposit-instructions.ts` (no user signature needed) | Not Started |

@@ -1,63 +1,60 @@
-import React, { createContext, useContext, useEffect, useMemo } from "react";
-import { usePrivy, useEmbeddedSolanaWallet } from "@privy-io/expo";
+import React, { createContext, useContext, useMemo } from "react";
+import { usePrivy } from "@privy-io/expo";
+import { useUnifiedWallet, WalletType } from "./UnifiedWalletProvider";
 
 // Toggle this to skip auth for testing UI screens
 const DEV_SKIP_AUTH = __DEV__ && true;
 
 interface AuthContextValue {
-  /** Whether Privy SDK has finished initialising */
+  /** Whether the auth system is ready */
   isReady: boolean;
-  /** Whether a user is logged in */
+  /** Whether a user is authenticated (via Privy or MWA) */
   isAuthenticated: boolean;
-  /** Privy user object (null when logged out) */
+  /** Privy user object (null when using MWA or logged out) */
   user: ReturnType<typeof usePrivy>["user"];
   /** Solana wallet address (null until wallet is connected) */
   walletAddress: string | null;
-  /** Wallet status from Privy embedded Solana wallet hook */
-  walletStatus: string;
+  /** Which wallet type is connected */
+  walletType: WalletType;
   /** Log the current user out */
   logout: () => Promise<void>;
-  /** Get a fresh access token for API calls */
+  /** Get a fresh Privy access token (null for MWA users) */
   getAccessToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user, isReady, logout, getAccessToken } = usePrivy();
-  const solanaWallet = useEmbeddedSolanaWallet();
+  const { user, isReady: privyReady, getAccessToken } = usePrivy();
+  const {
+    publicKey,
+    connected,
+    walletType,
+    disconnect,
+  } = useUnifiedWallet();
 
-  const isAuthenticated = DEV_SKIP_AUTH ? true : isReady && user !== null;
+  const isReady = DEV_SKIP_AUTH ? true : privyReady;
+  const isAuthenticated = DEV_SKIP_AUTH ? true : connected;
 
-  // Auto-create Solana wallet when user signs up and doesn't have one yet
-  useEffect(() => {
-    if (DEV_SKIP_AUTH) return;
-    if (isAuthenticated && solanaWallet.status === "not-created") {
-      solanaWallet.create().catch(() => {
-        // Wallet creation failed — will retry on next mount
-      });
-    }
-  }, [isAuthenticated, solanaWallet.status]);
+  const walletAddress = DEV_SKIP_AUTH
+    ? "DRpbCBMxVnDK7maPMoGQfFaCRJCPY1tGoHW9TRcpcbhA"
+    : publicKey;
 
-  const walletAddress = useMemo(() => {
-    if (DEV_SKIP_AUTH) return "DRpbCBMxVnDK7maPMoGQfFaCRJCPY1tGoHW9TRcpcbhA";
-    if (solanaWallet.status === "connected" && solanaWallet.wallets.length > 0) {
-      return solanaWallet.wallets[0].address;
-    }
-    return null;
-  }, [solanaWallet.status, solanaWallet.wallets]);
+  const logout = async () => {
+    await disconnect();
+  };
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      isReady: DEV_SKIP_AUTH ? true : isReady,
+      isReady,
       isAuthenticated,
       user: DEV_SKIP_AUTH ? ({} as ReturnType<typeof usePrivy>["user"]) : user,
       walletAddress,
-      walletStatus: DEV_SKIP_AUTH ? "connected" : solanaWallet.status,
+      walletType: DEV_SKIP_AUTH ? "privy" : walletType,
       logout,
       getAccessToken,
     }),
-    [isReady, isAuthenticated, user, walletAddress, solanaWallet.status, logout, getAccessToken]
+    [isReady, isAuthenticated, user, walletAddress, walletType, disconnect, getAccessToken]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -10,6 +10,9 @@ import { SplashScreen } from "expo-router";
 import { PrivyProvider } from "@privy-io/expo";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
+import { ConnectionProvider } from "../src/providers/ConnectionProvider";
+import { MWAProvider } from "../src/providers/MWAProvider";
+import { UnifiedWalletProvider } from "../src/providers/UnifiedWalletProvider";
 import { AuthProvider, useAuth } from "../src/providers/AuthProvider";
 import { hasSeenOnboarding } from "./onboarding";
 
@@ -98,35 +101,41 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID}>
-        <AuthProvider>
-          <StatusBar style="light" backgroundColor="#1A1A1A" />
-          <AuthGate>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: "#1A1A1A" },
-                animation: "slide_from_right",
-              }}
-            >
-              <Stack.Screen
-                name="auth/login"
-                options={{ animation: "fade" }}
-              />
-              <Stack.Screen
-                name="onboarding"
-                options={{ animation: "fade" }}
-              />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="trade/[market]" />
-              <Stack.Screen name="trader/[address]" />
-              <Stack.Screen name="deposit" />
-              <Stack.Screen name="withdraw" />
-            </Stack>
-          </AuthGate>
-          <Toast />
-        </AuthProvider>
-      </PrivyProvider>
+      <ConnectionProvider>
+        <PrivyProvider appId={PRIVY_APP_ID} clientId={PRIVY_CLIENT_ID}>
+          <MWAProvider>
+            <UnifiedWalletProvider>
+              <AuthProvider>
+                <StatusBar style="light" backgroundColor="#1A1A1A" />
+                <AuthGate>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: "#1A1A1A" },
+                      animation: "slide_from_right",
+                    }}
+                  >
+                    <Stack.Screen
+                      name="auth/login"
+                      options={{ animation: "fade" }}
+                    />
+                    <Stack.Screen
+                      name="onboarding"
+                      options={{ animation: "fade" }}
+                    />
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="trade/[market]" />
+                    <Stack.Screen name="trader/[address]" />
+                    <Stack.Screen name="deposit" />
+                    <Stack.Screen name="withdraw" />
+                  </Stack>
+                </AuthGate>
+                <Toast />
+              </AuthProvider>
+            </UnifiedWalletProvider>
+          </MWAProvider>
+        </PrivyProvider>
+      </ConnectionProvider>
     </GestureHandlerRootView>
   );
 }

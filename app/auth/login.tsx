@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLoginWithEmail, useLoginWithOAuth } from "@privy-io/expo";
+import Toast from "react-native-toast-message";
+import { useUnifiedWallet } from "../../src/providers/UnifiedWalletProvider";
 
 type Step = "choose" | "email_input" | "email_otp";
 
@@ -20,11 +22,13 @@ export default function LoginScreen() {
 
   const { sendCode, loginWithCode, state: emailState } = useLoginWithEmail();
   const { login: loginWithOAuth, state: oauthState } = useLoginWithOAuth();
+  const { connectMWA, connecting: mwaConnecting } = useUnifiedWallet();
 
   const isLoading =
     emailState.status === "sending-code" ||
     emailState.status === "submitting-code" ||
-    oauthState.status === "loading";
+    oauthState.status === "loading" ||
+    mwaConnecting;
 
   const handleEmailSend = async () => {
     try {
@@ -53,6 +57,31 @@ export default function LoginScreen() {
     }
   };
 
+  const handleConnectWallet = async () => {
+    try {
+      await connectMWA();
+      // AuthGate in _layout.tsx handles redirect
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to connect wallet";
+      if (message.includes("Found no installed wallet")) {
+        Toast.show({
+          type: "error",
+          text1: "No Wallet Found",
+          text2: "Install Phantom or Solflare to connect.",
+          visibilityTime: 4000,
+        });
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Connection Failed",
+          text2: message,
+          visibilityTime: 3000,
+        });
+      }
+    }
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-qban-black">
       <KeyboardAvoidingView
@@ -72,6 +101,30 @@ export default function LoginScreen() {
 
           {step === "choose" && (
             <View className="gap-3">
+              {/* Connect Wallet (MWA) — primary CTA */}
+              <Pressable
+                className="bg-qban-yellow rounded-xl py-4 items-center active:bg-qban-yellow-light"
+                onPress={handleConnectWallet}
+                disabled={isLoading}
+              >
+                {mwaConnecting ? (
+                  <ActivityIndicator color="#1A1A1A" size="small" />
+                ) : (
+                  <Text className="font-dm-bold text-base text-qban-black">
+                    Connect Wallet
+                  </Text>
+                )}
+              </Pressable>
+
+              {/* Divider */}
+              <View className="flex-row items-center my-2">
+                <View className="flex-1 h-px bg-qban-charcoal" />
+                <Text className="font-space text-xs text-qban-smoke-dark mx-4 uppercase tracking-widest">
+                  or
+                </Text>
+                <View className="flex-1 h-px bg-qban-charcoal" />
+              </View>
+
               {/* Apple Sign In */}
               {Platform.OS === "ios" && (
                 <Pressable
@@ -96,15 +149,6 @@ export default function LoginScreen() {
                 </Text>
               </Pressable>
 
-              {/* Divider */}
-              <View className="flex-row items-center my-2">
-                <View className="flex-1 h-px bg-qban-charcoal" />
-                <Text className="font-space text-xs text-qban-smoke-dark mx-4 uppercase tracking-widest">
-                  or
-                </Text>
-                <View className="flex-1 h-px bg-qban-charcoal" />
-              </View>
-
               {/* Email */}
               <Pressable
                 className="bg-qban-charcoal border border-qban-tan/20 rounded-xl py-4 items-center active:opacity-80"
@@ -116,7 +160,7 @@ export default function LoginScreen() {
                 </Text>
               </Pressable>
 
-              {isLoading && (
+              {isLoading && !mwaConnecting && (
                 <ActivityIndicator
                   color="#F5C518"
                   size="small"
