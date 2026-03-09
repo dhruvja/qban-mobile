@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo } from "react";
 import { usePrivy, useEmbeddedSolanaWallet } from "@privy-io/expo";
 
+// Toggle this to skip auth for testing UI screens
+const DEV_SKIP_AUTH = __DEV__ && true;
+
 interface AuthContextValue {
   /** Whether Privy SDK has finished initialising */
   isReady: boolean;
@@ -24,10 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { user, isReady, logout, getAccessToken } = usePrivy();
   const solanaWallet = useEmbeddedSolanaWallet();
 
-  const isAuthenticated = isReady && user !== null;
+  const isAuthenticated = DEV_SKIP_AUTH ? true : isReady && user !== null;
 
   // Auto-create Solana wallet when user signs up and doesn't have one yet
   useEffect(() => {
+    if (DEV_SKIP_AUTH) return;
     if (isAuthenticated && solanaWallet.status === "not-created") {
       solanaWallet.create().catch(() => {
         // Wallet creation failed — will retry on next mount
@@ -36,6 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, solanaWallet.status]);
 
   const walletAddress = useMemo(() => {
+    if (DEV_SKIP_AUTH) return "DRpbCBMxVnDK7maPMoGQfFaCRJCPY1tGoHW9TRcpcbhA";
     if (solanaWallet.status === "connected" && solanaWallet.wallets.length > 0) {
       return solanaWallet.wallets[0].address;
     }
@@ -44,11 +49,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      isReady,
+      isReady: DEV_SKIP_AUTH ? true : isReady,
       isAuthenticated,
-      user,
+      user: DEV_SKIP_AUTH ? ({} as ReturnType<typeof usePrivy>["user"]) : user,
       walletAddress,
-      walletStatus: solanaWallet.status,
+      walletStatus: DEV_SKIP_AUTH ? "connected" : solanaWallet.status,
       logout,
       getAccessToken,
     }),
