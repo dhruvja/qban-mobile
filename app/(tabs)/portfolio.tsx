@@ -22,9 +22,8 @@ import {
   getMarketPda,
   OrderType,
 } from "../../src/solana/market-instructions";
-import { CLOSE_PRESETS } from "../../src/constants";
+import { CLOSE_PRESETS, baseAtomsToSol } from "../../src/constants";
 import { fetchTraderFills } from "../../src/api/client";
-import { FillsList } from "../../src/components/FillsList";
 
 function formatUsd(v: number): string {
   return v.toLocaleString("en-US", {
@@ -33,6 +32,36 @@ function formatUsd(v: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+function formatTime(timestamp: string | undefined): string {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatDate(timestamp: string | undefined): string {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffDays = Math.floor(
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+interface FillItem {
+  orderId: number;
+  isBid: boolean;
+  baseAtoms: number;
+  quoteAtoms: number;
+  price: number;
+  blockTime: string | undefined;
 }
 
 export default function PortfolioScreen() {
@@ -95,6 +124,22 @@ export default function PortfolioScreen() {
     ? positionSol * currentPrice
     : 0;
   const totalBalance = marginUsd + inPositions;
+
+  // ─── Group fills by date ────────────────────────────────────
+  const groupedFills = useMemo(() => {
+    const groups: { date: string; items: FillItem[] }[] = [];
+    let currentGroup: { date: string; items: FillItem[] } | null = null;
+
+    for (const fill of fills) {
+      const dateStr = formatDate(fill.blockTime);
+      if (!currentGroup || currentGroup.date !== dateStr) {
+        currentGroup = { date: dateStr, items: [] };
+        groups.push(currentGroup);
+      }
+      currentGroup.items.push(fill);
+    }
+    return groups;
+  }, [fills]);
 
   // ─── Close Position Bottom Sheet ────────────────────────────
   const sheetRef = useRef<BottomSheet>(null);
@@ -349,16 +394,57 @@ export default function PortfolioScreen() {
         </View>
 
         {/* Trade History */}
-        <View className="px-6 mt-2">
+        <View className="px-6 mt-4">
           <View className="flex-row items-center my-3">
             <View className="flex-1 h-px bg-qban-charcoal" />
             <Text className="font-space text-xs text-qban-smoke-dark mx-4 uppercase tracking-widest">
-              Trade History
+              History
             </Text>
             <View className="flex-1 h-px bg-qban-charcoal" />
           </View>
 
-          <FillsList fills={fills} loading={fillsLoading} />
+          {groupedFills.length > 0 ? (
+            groupedFills.map((group) => (
+              <View key={group.date} className="mb-4">
+                <Text className="font-dm-medium text-xs text-qban-smoke-dark mb-2">
+                  {group.date}
+                </Text>
+                {group.items.map((fill, index) => {
+                  const fillSizeSol = baseAtomsToSol(fill.baseAtoms);
+                  return (
+                    <View
+                      key={`${fill.orderId}-${index}`}
+                      className="flex-row items-center justify-between py-2.5 border-b border-qban-charcoal"
+                    >
+                      <View className="flex-row items-center gap-2">
+                        <Text className="text-sm">
+                          {fill.isBid ? "\u2705" : "\u274C"}
+                        </Text>
+                        <View>
+                          <Text className="font-dm text-sm text-qban-white">
+                            SOL {fill.isBid ? "UP" : "DOWN"}
+                          </Text>
+                          <Text className="font-dm text-xs text-qban-smoke-dark">
+                            {fillSizeSol.toFixed(3)} SOL @{" "}
+                            {formatUsd(fill.price)}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text className="font-dm text-xs text-qban-smoke-dark">
+                        {formatTime(fill.blockTime)}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            ))
+          ) : (
+            <View className="items-center py-8">
+              <Text className="font-dm text-sm text-qban-smoke-dark">
+                Your trade history will appear here after your first trade.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
