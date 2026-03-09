@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -75,6 +75,8 @@ export default function LeaderboardScreen() {
   const { walletAddress } = useAuth();
 
   const [followedAddresses, setFollowedAddresses] = useState<string[]>([]);
+  const [reactions, setReactions] = useState<Record<string, { eyes: number; fire: number }>>({});
+  const [myReactions, setMyReactions] = useState<Record<string, Set<"eyes" | "fire">>>({});
 
   const loadFills = useCallback(async () => {
     try {
@@ -192,6 +194,31 @@ export default function LeaderboardScreen() {
     await Promise.all([loadFills(), loadFollows()]);
     setRefreshing(false);
   }, [loadFills, loadFollows]);
+
+  const toggleReaction = useCallback((itemId: string, type: "eyes" | "fire") => {
+    setMyReactions((prev) => {
+      const current = prev[itemId] ?? new Set();
+      const next = new Set(current);
+      const wasActive = next.has(type);
+      if (wasActive) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      // Update counts
+      setReactions((r) => {
+        const cur = r[itemId] ?? { eyes: 0, fire: 0 };
+        return {
+          ...r,
+          [itemId]: {
+            ...cur,
+            [type]: cur[type] + (wasActive ? -1 : 1),
+          },
+        };
+      });
+      return { ...prev, [itemId]: next };
+    });
+  }, []);
 
   const shortAddr = (addr: string) =>
     `${addr.slice(0, 4)}...${addr.slice(-4)}`;
@@ -427,9 +454,43 @@ export default function LeaderboardScreen() {
                   </Text>
                   {" "}at ${item.price.toFixed(2)}
                 </Text>
-                <Text className="font-space text-xs text-qban-smoke-dark mt-0.5">
-                  ${(item.size * item.price).toFixed(2)} notional
-                </Text>
+                <View className="flex-row items-center justify-between mt-1.5">
+                  <Text className="font-space text-xs text-qban-smoke-dark">
+                    ${(item.size * item.price).toFixed(2)} notional
+                  </Text>
+                  <View className="flex-row gap-2">
+                    <Pressable
+                      className={`flex-row items-center rounded-full px-2 py-0.5 ${
+                        myReactions[item.id]?.has("eyes")
+                          ? "bg-qban-yellow/20"
+                          : "bg-qban-charcoal"
+                      }`}
+                      onPress={() => toggleReaction(item.id, "eyes")}
+                    >
+                      <Text className="text-xs">👀</Text>
+                      {(reactions[item.id]?.eyes ?? 0) > 0 && (
+                        <Text className="font-space text-xs text-qban-smoke ml-1">
+                          {reactions[item.id].eyes}
+                        </Text>
+                      )}
+                    </Pressable>
+                    <Pressable
+                      className={`flex-row items-center rounded-full px-2 py-0.5 ${
+                        myReactions[item.id]?.has("fire")
+                          ? "bg-qban-yellow/20"
+                          : "bg-qban-charcoal"
+                      }`}
+                      onPress={() => toggleReaction(item.id, "fire")}
+                    >
+                      <Text className="text-xs">🔥</Text>
+                      {(reactions[item.id]?.fire ?? 0) > 0 && (
+                        <Text className="font-space text-xs text-qban-smoke ml-1">
+                          {reactions[item.id].fire}
+                        </Text>
+                      )}
+                    </Pressable>
+                  </View>
+                </View>
               </View>
             </Pressable>
           )}

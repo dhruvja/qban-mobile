@@ -971,7 +971,7 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | 8.5 | Trader profile page | Tap card → full profile with stats + recent activity | Done |
 | 8.6 | Friends tab | List of traders you follow + their rankings | Done |
 | 8.7 | Feed tab | Live activity stream of all public trades | Done |
-| 8.8 | Feed reactions | Emoji reactions on feed items (eyes, fire) | Not Started |
+| 8.8 | Feed reactions | Emoji reactions on feed items (eyes, fire) | Done |
 
 ### Phase 9: User Profiles
 
