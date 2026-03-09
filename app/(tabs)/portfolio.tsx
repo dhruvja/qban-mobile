@@ -417,8 +417,8 @@ export default function PortfolioScreen() {
                       className="flex-row items-center justify-between py-2.5 border-b border-qban-charcoal"
                     >
                       <View className="flex-row items-center gap-2">
-                        <Text className="text-sm">
-                          {fill.isBid ? "\u2B06\uFE0F" : "\u2B07\uFE0F"}
+                        <Text className={`text-sm ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
+                          {fill.isBid ? "\u25B2" : "\u25BC"}
                         </Text>
                         <View>
                           <Text className="font-dm text-sm text-qban-white">
