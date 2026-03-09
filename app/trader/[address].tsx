@@ -15,7 +15,7 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { fetchTraderPositions, fetchTraderOrders } from "../../src/api/client";
+import { fetchTraderPositions, fetchTraderFills } from "../../src/api/client";
 import { baseAtomsToSol } from "../../src/constants";
 import {
   isFollowing as checkFollowing,
@@ -23,7 +23,7 @@ import {
   unfollowTrader,
   getFollowedTraders,
 } from "../../src/services/followStorage";
-import type { UserOrder } from "../../src/types";
+import { FillsList } from "../../src/components/FillsList";
 
 function formatUsd(v: number): string {
   return `$${v.toFixed(2)}`;
@@ -35,8 +35,11 @@ function traderUsername(addr: string): string {
 
 export default function TraderProfileScreen() {
   const { address } = useLocalSearchParams<{ address: string }>();
-  const [orders, setOrders] = useState<UserOrder[]>([]);
+  const [fills, setFills] = useState<Awaited<ReturnType<typeof fetchTraderFills>>>([]);
+  const [fillsLoading, setFillsLoading] = useState(true);
   const [positionSide, setPositionSide] = useState<string>("flat");
+  const [totalVolume, setTotalVolume] = useState(0);
+  const [totalTrades, setTotalTrades] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
@@ -79,15 +82,21 @@ export default function TraderProfileScreen() {
   const loadData = useCallback(async () => {
     if (!address) return;
     try {
-      const [positions, traderOrders] = await Promise.all([
+      const [positions, traderFills] = await Promise.all([
         fetchTraderPositions(address),
-        fetchTraderOrders(address, 30),
+        fetchTraderFills(address, 50),
       ]);
       const active = positions.find((p) => p.side !== "flat");
       setPositionSide(active?.side ?? "flat");
-      setOrders(traderOrders);
+      setFills(traderFills);
+      setTotalTrades(traderFills.length);
+      setTotalVolume(
+        traderFills.reduce((sum, f) => sum + baseAtomsToSol(f.baseAtoms) * f.price, 0)
+      );
     } catch {
       // silently fail
+    } finally {
+      setFillsLoading(false);
     }
   }, [address]);
 
@@ -100,15 +109,6 @@ export default function TraderProfileScreen() {
     await loadData();
     setRefreshing(false);
   }, [loadData]);
-
-  const totalTrades = orders.length;
-  const totalVolume = orders.reduce((sum, o) => {
-    const avgPrice =
-      o.fills.length > 0
-        ? o.fills.reduce((s, f) => s + f.price, 0) / o.fills.length
-        : 0;
-    return sum + baseAtomsToSol(o.filled_base_atoms) * avgPrice;
-  }, 0);
 
   return (
     <SafeAreaView className="flex-1 bg-qban-black" edges={["top"]}>
@@ -220,50 +220,17 @@ export default function TraderProfileScreen() {
           </View>
         </View>
 
-        {/* Recent Activity */}
+        {/* Trade History */}
         <View className="px-6">
           <View className="flex-row items-center my-3">
             <View className="flex-1 h-px bg-qban-charcoal" />
             <Text className="font-space text-xs text-qban-smoke-dark mx-4 uppercase tracking-widest">
-              Recent Activity
+              Trade History
             </Text>
             <View className="flex-1 h-px bg-qban-charcoal" />
           </View>
 
-          {orders.length > 0 ? (
-            orders.slice(0, 20).map((order) => {
-              const avgPrice =
-                order.fills.length > 0
-                  ? order.fills.reduce((s, f) => s + f.price, 0) /
-                    order.fills.length
-                  : 0;
-              return (
-                <View
-                  key={order.id}
-                  className="flex-row items-center justify-between py-2.5 border-b border-qban-charcoal"
-                >
-                  <View className="flex-row items-center gap-2">
-                    <Text className="text-sm">
-                      {order.is_bid ? "\u2705" : "\u274C"}
-                    </Text>
-                    <Text className="font-dm text-sm text-qban-white">
-                      SOL {order.is_bid ? "UP" : "DOWN"}
-                    </Text>
-                  </View>
-                  <Text className="font-space text-xs text-qban-smoke-dark">
-                    {baseAtomsToSol(order.filled_base_atoms).toFixed(3)} SOL @{" "}
-                    {formatUsd(avgPrice)}
-                  </Text>
-                </View>
-              );
-            })
-          ) : (
-            <View className="items-center py-8">
-              <Text className="font-dm text-sm text-qban-smoke-dark">
-                No activity yet
-              </Text>
-            </View>
-          )}
+          <FillsList fills={fills} loading={fillsLoading} />
         </View>
       </ScrollView>
     </SafeAreaView>

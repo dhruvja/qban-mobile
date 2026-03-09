@@ -23,6 +23,8 @@ import {
   OrderType,
 } from "../../src/solana/market-instructions";
 import { CLOSE_PRESETS } from "../../src/constants";
+import { fetchTraderFills } from "../../src/api/client";
+import { FillsList } from "../../src/components/FillsList";
 
 function formatUsd(v: number): string {
   return v.toLocaleString("en-US", {
@@ -43,6 +45,8 @@ export default function PortfolioScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [closingPct, setClosingPct] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [fills, setFills] = useState<Awaited<ReturnType<typeof fetchTraderFills>>>([]);
+  const [fillsLoading, setFillsLoading] = useState(true);
 
   const hasPosition = position && position.direction !== "FLAT";
   const positionSol = position ? Math.abs(position.positionBase) : 0;
@@ -54,11 +58,27 @@ export default function PortfolioScreen() {
     return Number(position.costBasisAtoms) / 1e6 / positionSol;
   }, [position, positionSol]);
 
+  const loadFills = useCallback(async () => {
+    if (!walletAddress) return;
+    try {
+      const data = await fetchTraderFills(walletAddress, 50);
+      setFills(data);
+    } catch {
+      // silently fail
+    } finally {
+      setFillsLoading(false);
+    }
+  }, [walletAddress]);
+
+  useEffect(() => {
+    loadFills();
+  }, [loadFills]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshBalance();
+    await Promise.all([refreshBalance(), loadFills()]);
     setRefreshing(false);
-  }, [refreshBalance]);
+  }, [refreshBalance, loadFills]);
 
   // P&L calculation
   const pnl = useMemo(() => {
@@ -326,6 +346,19 @@ export default function PortfolioScreen() {
               </Text>
             </Pressable>
           </View>
+        </View>
+
+        {/* Trade History */}
+        <View className="px-6 mt-2">
+          <View className="flex-row items-center my-3">
+            <View className="flex-1 h-px bg-qban-charcoal" />
+            <Text className="font-space text-xs text-qban-smoke-dark mx-4 uppercase tracking-widest">
+              Trade History
+            </Text>
+            <View className="flex-1 h-px bg-qban-charcoal" />
+          </View>
+
+          <FillsList fills={fills} loading={fillsLoading} />
         </View>
       </ScrollView>
 

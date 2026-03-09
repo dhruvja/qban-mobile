@@ -146,6 +146,48 @@ export async function fetchTraderOrders(
   }));
 }
 
+/** Fetch a trader's individual fills (flattened from orders) */
+export async function fetchTraderFills(
+  trader: string,
+  limit = 50
+): Promise<
+  Array<{
+    orderId: number;
+    isBid: boolean;
+    baseAtoms: number;
+    quoteAtoms: number;
+    price: number;
+    blockTime: string | undefined;
+  }>
+> {
+  const data = await fetchApi<{ orders: RawOrder[] }>(
+    `/traders/${trader}/orders/fills?limit=${limit}`
+  );
+  const fills: Array<{
+    orderId: number;
+    isBid: boolean;
+    baseAtoms: number;
+    quoteAtoms: number;
+    price: number;
+    blockTime: string | undefined;
+  }> = [];
+
+  for (const order of data.orders) {
+    for (const fill of order.fills) {
+      fills.push({
+        orderId: order.id,
+        isBid: order.is_bid,
+        baseAtoms: fill.base_atoms,
+        quoteAtoms: fill.quote_atoms ?? 0,
+        price: fill.price ? apiPriceToUsd(fill.price) : 0,
+        blockTime: order.block_time,
+      });
+    }
+  }
+
+  return fills;
+}
+
 // ─── LEADERBOARD ────────────────────────────────────────────────────
 
 export async function fetchAllTraderFills(
