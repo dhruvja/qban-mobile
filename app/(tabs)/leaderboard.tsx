@@ -16,7 +16,11 @@ import { useAuth } from "../../src/providers/AuthProvider";
 import { fetchAllTraderFills } from "../../src/api/client";
 import { getFollowedTraders } from "../../src/services/followStorage";
 import { apiPriceToUsd, baseAtomsToSol } from "../../src/constants";
+import { getMarketPda } from "../../src/solana/market-instructions";
 import type { LeaderboardPeriod } from "../../src/types";
+
+const [MARKET_ADDRESS] = getMarketPda();
+const MARKET_STR = MARKET_ADDRESS.toBase58();
 
 function formatUsd(v: number): string {
   if (Math.abs(v) >= 1000)
@@ -70,7 +74,7 @@ export default function LeaderboardScreen() {
     totalVolume,
     loading: leaderboardLoading,
     refresh: refreshLeaderboard,
-  } = useLeaderboard("SOL/USD", period, currentPrice ?? 0);
+  } = useLeaderboard(MARKET_STR, period, currentPrice ?? 0);
 
   const [followedAddresses, setFollowedAddresses] = useState<string[]>([]);
   const [allFills, setAllFills] = useState<
@@ -95,7 +99,7 @@ export default function LeaderboardScreen() {
 
   const loadFills = useCallback(async () => {
     try {
-      const fills = await fetchAllTraderFills("SOL/USD");
+      const fills = await fetchAllTraderFills(MARKET_STR);
       setAllFills(fills);
     } catch {
       // silently fail
