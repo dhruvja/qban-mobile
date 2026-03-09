@@ -17,6 +17,10 @@ import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { fetchTraderPositions, fetchTraderFills } from "../../src/api/client";
 import { baseAtomsToSol } from "../../src/constants";
+import { getMarketPda } from "../../src/solana/market-instructions";
+
+const [MARKET_ADDRESS] = getMarketPda();
+const MARKET_STR = MARKET_ADDRESS.toBase58();
 import {
   isFollowing as checkFollowing,
   followTrader,
@@ -103,7 +107,7 @@ export default function TraderProfileScreen() {
     try {
       const [positions, traderFills] = await Promise.all([
         fetchTraderPositions(address),
-        fetchTraderFills(address, 50),
+        fetchTraderFills(address, MARKET_STR),
       ]);
       const active = positions.find((p) => p.side !== "flat");
       setPositionSide(active?.side ?? "flat");

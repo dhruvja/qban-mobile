@@ -146,10 +146,11 @@ export async function fetchTraderOrders(
   }));
 }
 
-/** Fetch a trader's individual fills (flattened from orders) */
+/** Fetch a trader's fills from market-level fills endpoint, filtered by address */
 export async function fetchTraderFills(
   trader: string,
-  limit = 50
+  market: string,
+  limit = 500
 ): Promise<
   Array<{
     orderId: number;
@@ -160,32 +161,20 @@ export async function fetchTraderFills(
     blockTime: string | undefined;
   }>
 > {
-  const data = await fetchApi<{ orders: RawOrder[] }>(
-    `/traders/${trader}/orders/fills?limit=${limit}`
+  const data = await fetchApi<{ fills: RawFill[] }>(
+    `/markets/${market}/fills?limit=${limit}`
   );
-  const fills: Array<{
-    orderId: number;
-    isBid: boolean;
-    baseAtoms: number;
-    quoteAtoms: number;
-    price: number;
-    blockTime: string | undefined;
-  }> = [];
 
-  for (const order of data.orders) {
-    for (const fill of order.fills) {
-      fills.push({
-        orderId: order.id,
-        isBid: order.is_bid,
-        baseAtoms: fill.base_atoms,
-        quoteAtoms: fill.quote_atoms ?? 0,
-        price: fill.price ? apiPriceToUsd(fill.price) : 0,
-        blockTime: order.block_time,
-      });
-    }
-  }
-
-  return fills;
+  return data.fills
+    .filter((f) => f.taker === trader || f.maker === trader)
+    .map((f, index) => ({
+      orderId: index,
+      isBid: f.taker === trader ? f.taker_is_buy : !f.taker_is_buy,
+      baseAtoms: f.base_atoms,
+      quoteAtoms: 0,
+      price: apiPriceToUsd(f.price),
+      blockTime: f.block_time,
+    }));
 }
 
 // ─── LEADERBOARD ────────────────────────────────────────────────────

@@ -24,6 +24,10 @@ import {
 } from "../../src/solana/market-instructions";
 import { CLOSE_PRESETS, baseAtomsToSol } from "../../src/constants";
 import { fetchTraderFills } from "../../src/api/client";
+import { getMarketPda } from "../../src/solana/market-instructions";
+
+const [MARKET_ADDRESS] = getMarketPda();
+const MARKET_STR = MARKET_ADDRESS.toBase58();
 
 function formatUsd(v: number): string {
   return v.toLocaleString("en-US", {
@@ -90,7 +94,7 @@ export default function PortfolioScreen() {
   const loadFills = useCallback(async () => {
     if (!walletAddress) return;
     try {
-      const data = await fetchTraderFills(walletAddress, 50);
+      const data = await fetchTraderFills(walletAddress, MARKET_STR);
       setFills(data);
     } catch {
       // silently fail
