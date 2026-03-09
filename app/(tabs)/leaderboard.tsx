@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { SkeletonRow } from "../../src/components/Skeleton";
 import { router } from "expo-router";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
+import { useLeaderboard } from "../../src/hooks/useLeaderboard";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { fetchAllTraderFills } from "../../src/api/client";
 import { getFollowedTraders } from "../../src/services/followStorage";
@@ -56,30 +57,41 @@ const TIME_FILTERS: { label: string; value: LeaderboardPeriod }[] = [
   { label: "Month", value: "month" },
 ];
 
-function getPeriodCutoff(period: LeaderboardPeriod): number {
-  const now = Date.now();
-  switch (period) {
-    case "week":
-      return now - 7 * 24 * 60 * 60 * 1000;
-    case "month":
-      return now - 30 * 24 * 60 * 60 * 1000;
-    default:
-      return 0;
-  }
-}
-
 export default function LeaderboardScreen() {
   const [tab, setTab] = useState<Tab>("top");
   const [period, setPeriod] = useState<LeaderboardPeriod>("all");
-  const [allFills, setAllFills] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const { price: currentPrice } = usePythPrice();
   const { walletAddress } = useAuth();
 
+  // Use the leaderboard hook (matches perp-ui logic)
+  const {
+    traders,
+    totalVolume,
+    loading: leaderboardLoading,
+    refresh: refreshLeaderboard,
+  } = useLeaderboard("SOL/USD", period, currentPrice ?? 0);
+
   const [followedAddresses, setFollowedAddresses] = useState<string[]>([]);
+  const [allFills, setAllFills] = useState<
+    Array<{
+      id?: string;
+      signature?: string;
+      price: string | number;
+      base_atoms: number;
+      taker_is_buy: boolean;
+      block_time: string;
+      taker?: string;
+      maker?: string;
+    }>
+  >([]);
   const [reactions, setReactions] = useState<Record<string, { eyes: number; fire: number }>>({});
   const [myReactions, setMyReactions] = useState<Record<string, Set<"eyes" | "fire">>>({});
+
+  const loadFollows = useCallback(async () => {
+    const follows = await getFollowedTraders();
+    setFollowedAddresses(follows);
+  }, []);
 
   const loadFills = useCallback(async () => {
     try {
@@ -90,14 +102,10 @@ export default function LeaderboardScreen() {
     }
   }, []);
 
-  const loadFollows = useCallback(async () => {
-    const follows = await getFollowedTraders();
-    setFollowedAddresses(follows);
-  }, []);
-
   useEffect(() => {
-    Promise.all([loadFills(), loadFollows()]).finally(() => setInitialLoading(false));
-  }, [loadFills, loadFollows]);
+    loadFollows();
+    loadFills();
+  }, [loadFollows, loadFills]);
 
   // Reload follows when switching to Friends tab
   useEffect(() => {
@@ -105,65 +113,6 @@ export default function LeaderboardScreen() {
       loadFollows();
     }
   }, [tab, loadFollows]);
-
-  // Compute leaderboard from fills, applying time filter
-  const traders = useMemo(() => {
-    const cutoff = getPeriodCutoff(period);
-
-    const traderMap = new Map<
-      string,
-      { volume: number; trades: number; netBase: number; netQuote: number }
-    >();
-
-    for (const fill of allFills) {
-      // Apply time filter
-      if (fill.block_time) {
-        const fillTime = new Date(fill.block_time).getTime();
-        if (fillTime < cutoff) continue;
-      } else if (period !== "all") {
-        continue; // skip fills without timestamp when filtering
-      }
-
-      const trader = fill.taker ?? fill.maker ?? "unknown";
-      const existing = traderMap.get(trader) ?? {
-        volume: 0,
-        trades: 0,
-        netBase: 0,
-        netQuote: 0,
-      };
-
-      const price = apiPriceToUsd(fill.price);
-      const size = baseAtomsToSol(fill.base_atoms);
-      existing.volume += size * price;
-      existing.trades += 1;
-
-      if (fill.taker_is_buy) {
-        existing.netBase += size;
-        existing.netQuote -= size * price;
-      } else {
-        existing.netBase -= size;
-        existing.netQuote += size * price;
-      }
-
-      traderMap.set(trader, existing);
-    }
-
-    const oraclePrice = currentPrice ?? 0;
-    return Array.from(traderMap.entries())
-      .map(([trader, data]) => ({
-        trader,
-        trades: data.trades,
-        volume: data.volume,
-        pnl: data.netQuote + data.netBase * oraclePrice,
-        rank: 0,
-        effectiveLeverage: 1,
-        entryPrice: 0,
-        side: "flat" as const,
-        positionSize: Math.abs(data.netBase),
-      }))
-      .sort((a, b) => b.pnl - a.pnl)
-      .map((t, i) => ({ ...t, rank: i + 1 }));
-  }, [allFills, currentPrice, period]);
 
   const friendTraders = useMemo(() => {
     if (followedAddresses.length === 0) return [];
@@ -193,9 +142,9 @@ export default function LeaderboardScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([loadFills(), loadFollows()]);
+    await Promise.all([refreshLeaderboard(), loadFollows(), loadFills()]);
     setRefreshing(false);
-  }, [loadFills, loadFollows]);
+  }, [refreshLeaderboard, loadFollows, loadFills]);
 
   const toggleReaction = useCallback((itemId: string, type: "eyes" | "fire") => {
     setMyReactions((prev) => {
@@ -207,7 +156,6 @@ export default function LeaderboardScreen() {
       } else {
         next.add(type);
       }
-      // Update counts
       setReactions((r) => {
         const cur = r[itemId] ?? { eyes: 0, fire: 0 };
         return {
@@ -222,9 +170,6 @@ export default function LeaderboardScreen() {
     });
   }, []);
 
-  const shortAddr = (addr: string) =>
-    `${addr.slice(0, 4)}...${addr.slice(-4)}`;
-
   return (
     <SafeAreaView className="flex-1 bg-qban-black" edges={["top"]}>
       {/* Header */}
@@ -232,6 +177,11 @@ export default function LeaderboardScreen() {
         <Text className="font-bebas text-3xl text-qban-white tracking-wider">
           Leaderboard
         </Text>
+        {totalVolume > 0 && tab === "top" && (
+          <Text className="font-space text-xs text-qban-smoke-dark mt-1">
+            Total Volume: {formatUsd(totalVolume)}
+          </Text>
+        )}
       </View>
 
       {/* Tab bar */}
@@ -321,9 +271,31 @@ export default function LeaderboardScreen() {
                       </Text>
                     </View>
                     <View>
-                      <Text className="font-dm text-sm text-qban-yellow">
-                        {traderUsername(item.trader)}
-                      </Text>
+                      <View className="flex-row items-center gap-1.5">
+                        <Text className="font-dm text-sm text-qban-yellow">
+                          {traderUsername(item.trader)}
+                        </Text>
+                        {item.side !== "flat" && (
+                          <View
+                            className={`rounded-full px-1.5 py-0.5 ${
+                              item.side === "long"
+                                ? "bg-qban-green/15"
+                                : "bg-qban-red/15"
+                            }`}
+                          >
+                            <Text
+                              className={`font-space text-[10px] ${
+                                item.side === "long"
+                                  ? "text-qban-green"
+                                  : "text-qban-red"
+                              }`}
+                            >
+                              {item.side === "long" ? "LONG" : "SHORT"}{" "}
+                              {item.positionSize.toFixed(2)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <Text className="font-space text-xs text-qban-smoke-dark">
                         {item.trades} trades · Vol{" "}
                         {formatUsd(item.volume)}
@@ -345,7 +317,7 @@ export default function LeaderboardScreen() {
               </Animated.View>
             )}
             ListEmptyComponent={
-              initialLoading ? (
+              leaderboardLoading ? (
                 <View className="px-0">
                   {[...Array(6)].map((_, i) => (
                     <SkeletonRow key={i} />
