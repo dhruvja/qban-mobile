@@ -95,44 +95,36 @@ interface ChartProps {
 
 export function Chart({ candles, liveCandle, height = 280 }: ChartProps) {
   const webViewRef = useRef<WebView>(null);
-  const sentInitial = useRef(false);
+  const webViewReady = useRef(false);
 
   const sendMessage = useCallback((msg: object) => {
     webViewRef.current?.postMessage(JSON.stringify(msg));
   }, []);
 
-  // Send initial candle data once WebView is loaded
-  const onLoad = useCallback(() => {
-    if (candles.length > 0) {
-      sendMessage({
-        type: "candles",
-        data: candles.map((c) => ({
-          time: Math.floor(c.time / 1000),
-          open: c.open,
-          high: c.high,
-          low: c.low,
-          close: c.close,
-        })),
-      });
-      sentInitial.current = true;
-    }
+  const sendCandles = useCallback(() => {
+    if (!webViewReady.current || candles.length === 0) return;
+    sendMessage({
+      type: "candles",
+      data: candles.map((c) => ({
+        time: Math.floor(c.time / 1000),
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      })),
+    });
   }, [candles, sendMessage]);
 
-  // Send candle data when it changes
+  // WebView finished loading — send candles if we have them
+  const onLoad = useCallback(() => {
+    webViewReady.current = true;
+    sendCandles();
+  }, [sendCandles]);
+
+  // Candles changed — send if WebView is ready
   useEffect(() => {
-    if (sentInitial.current && candles.length > 0) {
-      sendMessage({
-        type: "candles",
-        data: candles.map((c) => ({
-          time: Math.floor(c.time / 1000),
-          open: c.open,
-          high: c.high,
-          low: c.low,
-          close: c.close,
-        })),
-      });
-    }
-  }, [candles, sendMessage]);
+    sendCandles();
+  }, [sendCandles]);
 
   // Stream live candle updates
   useEffect(() => {

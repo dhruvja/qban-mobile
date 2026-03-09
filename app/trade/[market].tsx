@@ -45,8 +45,9 @@ function formatUsd(v: number): string {
 type Direction = "long" | "short";
 
 export default function TradeScreen() {
-  const { market } = useLocalSearchParams<{ market: string }>();
-  const baseToken = market?.split("/")?.[0] ?? "SOL";
+  const { market: rawMarket } = useLocalSearchParams<{ market: string }>();
+  const market = rawMarket ? decodeURIComponent(rawMarket) : "SOL/USD";
+  const baseToken = market.split("/")[0] ?? "SOL";
 
   // ─── Auth & Balance ────────────────────────────────────────
   const { walletAddress } = useAuth();
