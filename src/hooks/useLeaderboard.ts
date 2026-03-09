@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchAllTraderFills, fetchTraderPositions } from "../api/client";
 import { apiPriceToUsd } from "../constants";
 import type { LeaderboardTrader, LeaderboardPeriod } from "../types";
@@ -18,10 +18,14 @@ export function useLeaderboard(
   const [traders, setTraders] = useState<LeaderboardTrader[]>([]);
   const [totalVolume, setTotalVolume] = useState(0);
   const [loading, setLoading] = useState(true);
+  const hasLoadedOnce = useRef(false);
 
   const fetchLeaderboard = useCallback(async () => {
     try {
-      setLoading(true);
+      // Only show loading skeleton on the very first fetch
+      if (!hasLoadedOnce.current) {
+        setLoading(true);
+      }
 
       // Fetch all fills to discover unique traders
       const fills = await fetchAllTraderFills(market);
@@ -103,9 +107,15 @@ export function useLeaderboard(
     } catch {
       // silently fail
     } finally {
+      hasLoadedOnce.current = true;
       setLoading(false);
     }
   }, [market, period, oraclePrice]);
+
+  // Reset loading state when period changes
+  useEffect(() => {
+    hasLoadedOnce.current = false;
+  }, [period]);
 
   useEffect(() => {
     fetchLeaderboard();
