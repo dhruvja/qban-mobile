@@ -7,6 +7,7 @@ import { useAuth } from "../../src/providers/AuthProvider";
 import { useConnections } from "../../src/providers/ConnectionProvider";
 import { getMarginBalance } from "../../src/solana/market-instructions";
 import { getTokenBalance, airdropUsdc, depositFlow } from "../../src/solana/deposit-instructions";
+import { AIRDROP_AMOUNT } from "../../src/solana/constants";
 import { useUnifiedWallet } from "../../src/providers/UnifiedWalletProvider";
 
 type SetupStep =
@@ -19,7 +20,7 @@ type SetupStep =
 export default function SetupScreen() {
   const { walletAddress } = useAuth();
   const { devnetConnection, magicblockConnection } = useConnections();
-  const { sendTransaction } = useUnifiedWallet();
+  const { signTransaction } = useUnifiedWallet();
   const [step, setStep] = useState<SetupStep>("checking_balance");
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
@@ -44,7 +45,6 @@ export default function SetupScreen() {
     console.log("[setup] Margin balance:", marginBalance);
 
     if (marginBalance > 0) {
-      // Already has platform balance — go to home
       setStep("done");
       router.replace("/(tabs)");
       return;
@@ -54,33 +54,31 @@ export default function SetupScreen() {
     const tokenBalance = await getTokenBalance(pubkey, devnetConnection);
     console.log("[setup] Token balance:", tokenBalance);
 
+    let depositAmount: number;
+
     if (tokenBalance === 0) {
-      // Step 3: Airdrop tokens
+      // Step 3: Airdrop tokens — use known amount since balance may lag
       setStep("airdropping");
       await airdropUsdc({ publicKey: pubkey, devnetConnection });
-      console.log("[setup] Airdrop complete");
+      console.log("[setup] Airdrop complete (100 USDC)");
+      depositAmount = AIRDROP_AMOUNT; // 100_000_000 atoms
+    } else {
+      depositAmount = Math.floor(tokenBalance * 1_000_000);
     }
 
-    // Step 4: Get fresh balance after airdrop
-    const balanceAfterAirdrop = await getTokenBalance(pubkey, devnetConnection);
-    const depositAmount = Math.floor(balanceAfterAirdrop * 1_000_000); // Convert to atoms
-
-    if (depositAmount <= 0) {
-      throw new Error("No tokens available to deposit");
-    }
-
-    // Step 5: Deposit
-    setStep("depositing");
-    const signTransaction = async (tx: import("@solana/web3.js").Transaction) => {
-      // For MWA, we use sendTransaction which handles sign+send
-      // For now, we need to sign via the wallet
-      // This is a simplified flow — MWA handles it differently
-      throw new Error("Direct signing not yet available — use wallet adapter");
-    };
-
-    // TODO: Wire up proper signing through unified wallet
-    // For now, skip deposit and go to home
     console.log("[setup] Deposit amount:", depositAmount, "atoms");
+
+    // Step 4: Deposit into platform
+    setStep("depositing");
+    const results = await depositFlow({
+      publicKey: pubkey,
+      devnetConnection,
+      magicblockConnection,
+      amount: depositAmount,
+      signTransaction,
+    });
+    console.log("[setup] Deposit results:", results);
+
     setStep("done");
     router.replace("/(tabs)");
   }

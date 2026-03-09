@@ -32,6 +32,9 @@ interface UnifiedWalletContextValue {
   /** Disconnect the current wallet */
   disconnect: () => Promise<void>;
 
+  /** Sign a transaction (without sending) through the connected wallet */
+  signTransaction: (transaction: Transaction) => Promise<Transaction>;
+
   /** Sign and send a transaction through the connected wallet */
   sendTransaction: (
     transaction: Transaction | VersionedTransaction,
@@ -121,6 +124,24 @@ export function UnifiedWalletProvider({ children }: { children: ReactNode }) {
     setWalletType(null);
   }, [walletType, mwaDisconnect, privyLogout]);
 
+  // ─── Sign Transaction (sign only, no send) ─────────────────
+  const signTransaction = useCallback(
+    async (transaction: Transaction): Promise<Transaction> => {
+      if (walletType === "mwa") {
+        return withWallet(async (wallet, _pubkey) => {
+          const signed = await wallet.signTransactions({
+            transactions: [transaction],
+          });
+          return signed[0];
+        });
+      } else if (walletType === "privy") {
+        throw new Error("Privy signTransaction not yet implemented");
+      }
+      throw new Error("No wallet connected");
+    },
+    [walletType, withWallet]
+  );
+
   // ─── Send Transaction ───────────────────────────────────────
   const sendTransaction = useCallback(
     async (
@@ -164,6 +185,7 @@ export function UnifiedWalletProvider({ children }: { children: ReactNode }) {
       connecting,
       connectMWA,
       disconnect,
+      signTransaction,
       sendTransaction,
     }),
     [
@@ -173,6 +195,7 @@ export function UnifiedWalletProvider({ children }: { children: ReactNode }) {
       connecting,
       connectMWA,
       disconnect,
+      signTransaction,
       sendTransaction,
     ]
   );
