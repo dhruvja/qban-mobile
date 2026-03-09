@@ -130,12 +130,12 @@ export async function hasSeat(
   const info = await connection.getAccountInfo(market);
   if (!info) return false;
 
-  const data = info.data;
+  const data = Buffer.from(info.data);
   const rootIndex = data.readUInt32LE(CLAIMED_SEATS_ROOT_OFFSET);
-  const dynamic = data.subarray(FIXED_HEADER_SIZE);
+  const dynamic = Buffer.from(data.subarray(FIXED_HEADER_SIZE));
   const traderBytes = publicKey.toBuffer();
 
-  return walkTree(dynamic as Buffer, rootIndex, (nodeIndex) => {
+  return walkTree(dynamic, rootIndex, (nodeIndex) => {
     const traderSlice = dynamic.subarray(
       nodeIndex + RB_HEADER_SIZE,
       nodeIndex + RB_HEADER_SIZE + TRADER_PUBKEY_SIZE
@@ -156,14 +156,14 @@ export async function getMarginBalance(
   const info = await connection.getAccountInfo(market);
   if (!info) return 0;
 
-  const data = info.data;
+  const data = Buffer.from(info.data);
   const rootIndex = data.readUInt32LE(CLAIMED_SEATS_ROOT_OFFSET);
-  const dynamic = data.subarray(FIXED_HEADER_SIZE);
+  const dynamic = Buffer.from(data.subarray(FIXED_HEADER_SIZE));
   const traderBytes = publicKey.toBuffer();
 
   let marginAtoms = 0;
 
-  walkTree(dynamic as Buffer, rootIndex, (nodeIndex) => {
+  walkTree(dynamic, rootIndex, (nodeIndex) => {
     const traderSlice = dynamic.subarray(
       nodeIndex + RB_HEADER_SIZE,
       nodeIndex + RB_HEADER_SIZE + TRADER_PUBKEY_SIZE
