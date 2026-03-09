@@ -418,7 +418,7 @@ export default function PortfolioScreen() {
                     >
                       <View className="flex-row items-center gap-2">
                         <Text className="text-sm">
-                          {fill.isBid ? "\u2705" : "\u274C"}
+                          {fill.isBid ? "\u2B06\uFE0F" : "\u2B07\uFE0F"}
                         </Text>
                         <View>
                           <Text className="font-dm text-sm text-qban-white">
