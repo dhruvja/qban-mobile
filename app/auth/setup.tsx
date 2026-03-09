@@ -6,7 +6,7 @@ import { PublicKey } from "@solana/web3.js";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { useConnections } from "../../src/providers/ConnectionProvider";
 import { getMarginBalance } from "../../src/solana/market-instructions";
-import { getTokenBalance, airdropUsdc, depositFlow } from "../../src/solana/deposit-instructions";
+import { getTokenBalance, getSolBalance, airdropUsdc, airdropSol, depositFlow } from "../../src/solana/deposit-instructions";
 import { AIRDROP_AMOUNT } from "../../src/solana/constants";
 import { useUnifiedWallet } from "../../src/providers/UnifiedWalletProvider";
 import { hasCompletedProfile } from "../../src/services/profileStorage";
@@ -55,18 +55,31 @@ export default function SetupScreen() {
       return;
     }
 
-    const tokenBalance = await getTokenBalance(pubkey, devnetConnection);
-    console.log("[setup] Token balance:", tokenBalance);
+    const [tokenBalance, solBalance] = await Promise.all([
+      getTokenBalance(pubkey, devnetConnection),
+      getSolBalance(pubkey, devnetConnection),
+    ]);
+    console.log("[setup] Token balance:", tokenBalance, "SOL lamports:", solBalance);
 
-    let amount: number;
-    if (tokenBalance === 0) {
+    const needsUsdc = tokenBalance === 0;
+    const needsSol = solBalance < 5_000_000; // < 0.005 SOL
+
+    if (needsUsdc || needsSol) {
       setStep("airdropping");
-      await airdropUsdc({ publicKey: pubkey, devnetConnection });
-      console.log("[setup] Airdrop complete (100 USDC)");
-      amount = AIRDROP_AMOUNT;
-    } else {
-      amount = Math.floor(tokenBalance * 1_000_000);
+      const airdrops: Promise<string>[] = [];
+      if (needsUsdc) {
+        airdrops.push(airdropUsdc({ publicKey: pubkey, devnetConnection }));
+      }
+      if (needsSol) {
+        airdrops.push(airdropSol({ publicKey: pubkey, devnetConnection }));
+      }
+      await Promise.all(airdrops);
+      console.log("[setup] Airdrop complete — USDC:", needsUsdc, "SOL:", needsSol);
     }
+
+    const amount = needsUsdc
+      ? AIRDROP_AMOUNT
+      : Math.floor(tokenBalance * 1_000_000);
 
     setDepositAmount(amount);
     setStep("ready_to_deposit");

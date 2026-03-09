@@ -332,6 +332,8 @@ export async function depositFlow({
 
 // ─── Airdrop ────────────────────────────────────────────────────
 
+const SOL_AIRDROP_LAMPORTS = 10_000_000; // 0.01 SOL
+
 /**
  * Airdrop 100 USDC to the given wallet.
  * Mint authority pays for everything — no user signature needed.
@@ -366,17 +368,52 @@ export async function airdropUsdc({
   const sig = await devnetConnection.sendRawTransaction(tx.serialize(), {
     skipPreflight: true,
   });
-  console.log("[airdrop] Tx:", sig);
+  console.log("[airdrop] USDC Tx:", sig);
 
   await devnetConnection.confirmTransaction(
     { signature: sig, ...blockhash },
     "confirmed"
   );
-  console.log("[airdrop] Confirmed");
+  console.log("[airdrop] USDC confirmed");
+  return sig;
+}
+
+/**
+ * Airdrop 0.01 SOL to the given wallet via devnet faucet.
+ */
+export async function airdropSol({
+  publicKey,
+  devnetConnection,
+}: {
+  publicKey: PublicKey;
+  devnetConnection: Connection;
+}): Promise<string> {
+  const sig = await devnetConnection.requestAirdrop(publicKey, SOL_AIRDROP_LAMPORTS);
+  console.log("[airdrop] SOL Tx:", sig);
+  const blockhash = await devnetConnection.getLatestBlockhash();
+  await devnetConnection.confirmTransaction(
+    { signature: sig, ...blockhash },
+    "confirmed"
+  );
+  console.log("[airdrop] SOL confirmed");
   return sig;
 }
 
 // ─── Balance Helpers ────────────────────────────────────────────
+
+/**
+ * Get wallet SOL balance in lamports.
+ */
+export async function getSolBalance(
+  publicKey: PublicKey,
+  connection: Connection
+): Promise<number> {
+  try {
+    return await connection.getBalance(publicKey);
+  } catch {
+    return 0;
+  }
+}
 
 /**
  * Get wallet USDC token balance (in UI units).
