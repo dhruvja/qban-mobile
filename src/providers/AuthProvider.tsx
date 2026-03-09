@@ -3,7 +3,7 @@ import { usePrivy } from "@privy-io/expo";
 import { useUnifiedWallet, WalletType } from "./UnifiedWalletProvider";
 
 // Toggle this to skip auth for testing UI screens
-const DEV_SKIP_AUTH = __DEV__ && true;
+const DEV_SKIP_AUTH = false;
 
 interface AuthContextValue {
   /** Whether the auth system is ready */
