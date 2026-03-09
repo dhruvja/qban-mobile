@@ -48,8 +48,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/auth/login");
-    } else if (isAuthenticated && inAuthGroup && (segments as string[])[1] === "login") {
-      // Just logged in from login screen — go to setup (balance check + airdrop)
+    } else if (isAuthenticated && inAuthGroup) {
+      // Authenticated (fresh login or restored session) — go to setup
       if (onboardingChecked) {
         router.replace("/auth/setup");
       }
