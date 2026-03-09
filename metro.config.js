@@ -9,15 +9,21 @@ config.resolver.extraNodeModules = {
   crypto: require.resolve("expo-crypto"),
 };
 
-// Add "browser" to unstable_conditionNames so packages like jose use browser builds
+// Enable package exports so Privy, jose, zustand etc. resolve correctly
+config.resolver.unstable_enablePackageExports = true;
+
+// Condition names for export resolution — browser builds for jose, react-native for RN packages
 config.resolver.unstable_conditionNames = [
+  "react-native",
   "browser",
   "require",
-  "react-native",
 ];
 
-// Force viem to use its CJS build instead of .ts source files
+// Packages that break with package exports — disable exports for them
+config.resolver.unstable_enablePackageExports = true;
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Force viem to use its CJS build instead of .ts source files
   if (moduleName === "viem" || moduleName.startsWith("viem/")) {
     const suffix = moduleName === "viem" ? "" : moduleName.slice(4);
     const cjsPath = path.join(
@@ -32,6 +38,19 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       type: "sourceFile",
     };
   }
+
+  // Disable package exports for packages that are incompatible
+  if (
+    moduleName === "isows" ||
+    moduleName.startsWith("isows/")
+  ) {
+    return context.resolveRequest(
+      { ...context, unstable_enablePackageExports: false },
+      moduleName,
+      platform
+    );
+  }
+
   return context.resolveRequest(context, moduleName, platform);
 };
 
