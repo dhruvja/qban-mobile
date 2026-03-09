@@ -78,10 +78,8 @@ export default function ProfileSetupSheet({ visible, onDismiss, onSaved }: Profi
     setSaving(true);
     try {
       await saveProfile({
-        wallet_address: walletAddress,
+        address: walletAddress,
         username,
-        bio: bio || undefined,
-        pfp_url: pfpUri || undefined,
       });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onSaved();

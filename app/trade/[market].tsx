@@ -163,7 +163,7 @@ export default function TradeScreen() {
       // After first trade, prompt profile setup if not already done
       await setHasTraded();
       const [profileDone, promptShown] = await Promise.all([
-        hasCompletedProfile(),
+        hasCompletedProfile(walletAddress!),
         hasProfilePromptBeenShown(),
       ]);
       if (!profileDone && !promptShown) {

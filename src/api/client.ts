@@ -187,3 +187,205 @@ export async function fetchAllTraderFills(
   );
   return data.fills;
 }
+
+// ─── USER PROFILES ──────────────────────────────────────────────────
+
+export interface ApiUserProfile {
+  address: string;
+  username: string;
+  image_url: string;
+  twitter: string;
+  telegram: string;
+  follower_count: number;
+  following_count: number;
+  stats: Array<{
+    volume_quote: string;
+    num_trades: number;
+    realized_pnl: number;
+  }>;
+}
+
+export async function createProfile(params: {
+  address: string;
+  username: string;
+  twitter?: string;
+  telegram?: string;
+}): Promise<ApiUserProfile> {
+  const response = await fetch(`${API_BASE_URL}/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      address: params.address,
+      username: params.username,
+      image_url: "",
+      twitter: params.twitter ?? "",
+      telegram: params.telegram ?? "",
+    }),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Create profile failed: ${response.status} ${text}`);
+  }
+  return response.json();
+}
+
+export async function updateProfile(
+  address: string,
+  params: {
+    username?: string;
+    image_url?: string;
+    twitter?: string;
+    telegram?: string;
+  }
+): Promise<ApiUserProfile> {
+  const response = await fetch(`${API_BASE_URL}/users/${address}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Update profile failed: ${response.status} ${text}`);
+  }
+  return response.json();
+}
+
+export async function fetchProfile(
+  address: string
+): Promise<ApiUserProfile> {
+  return fetchApi<ApiUserProfile>(`/users/${address}`);
+}
+
+// ─── FOLLOW SYSTEM ──────────────────────────────────────────────────
+
+export async function followUser(
+  targetAddress: string,
+  followerAddress: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/users/${targetAddress}/follow`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ follower: followerAddress }),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Follow failed: ${response.status} ${text}`);
+  }
+}
+
+export async function unfollowUser(
+  targetAddress: string,
+  followerAddress: string
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/users/${targetAddress}/unfollow`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ follower: followerAddress }),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Unfollow failed: ${response.status} ${text}`);
+  }
+}
+
+interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export async function fetchFollowers(
+  address: string,
+  limit = 50,
+  offset = 0
+): Promise<PaginatedResponse<ApiUserProfile>> {
+  return fetchApi<PaginatedResponse<ApiUserProfile>>(
+    `/users/${address}/followers?limit=${limit}&offset=${offset}`
+  );
+}
+
+export async function fetchFollowing(
+  address: string,
+  limit = 50,
+  offset = 0
+): Promise<PaginatedResponse<ApiUserProfile>> {
+  return fetchApi<PaginatedResponse<ApiUserProfile>>(
+    `/users/${address}/following?limit=${limit}&offset=${offset}`
+  );
+}
+
+// ─── LEADERBOARD (NEW ENDPOINT) ─────────────────────────────────────
+
+export type LeaderboardPeriodApi =
+  | "today"
+  | "yesterday"
+  | "this_week"
+  | "this_month"
+  | "all_time";
+
+export interface LeaderboardEntry {
+  rank: number;
+  address: string;
+  username: string | null;
+  image_url: string | null;
+  follower_count: number;
+  following_count: number;
+  volume_quote: string;
+  num_trades: number;
+  realized_pnl: number;
+}
+
+export async function fetchLeaderboard(
+  period: LeaderboardPeriodApi = "all_time",
+  limit = 50,
+  offset = 0
+): Promise<PaginatedResponse<LeaderboardEntry>> {
+  return fetchApi<PaginatedResponse<LeaderboardEntry>>(
+    `/leaderboard?period=${period}&limit=${limit}&offset=${offset}`
+  );
+}
+
+// ─── SOCIAL FEED ────────────────────────────────────────────────────
+
+export interface FeedFill {
+  id: number;
+  signature: string;
+  market: string;
+  maker: string;
+  taker: string;
+  price: string;
+  base_atoms: number;
+  quote_atoms: number;
+  taker_is_buy: boolean;
+  block_time: string;
+  maker_username: string | null;
+  maker_image_url: string | null;
+  taker_username: string | null;
+  taker_image_url: string | null;
+}
+
+export async function fetchFriendsFeed(
+  address: string,
+  limit = 50,
+  offset = 0
+): Promise<PaginatedResponse<FeedFill>> {
+  return fetchApi<PaginatedResponse<FeedFill>>(
+    `/feed/friends?address=${address}&limit=${limit}&offset=${offset}`
+  );
+}
+
+export async function fetchGlobalFeed(
+  limit = 50,
+  offset = 0
+): Promise<PaginatedResponse<FeedFill>> {
+  return fetchApi<PaginatedResponse<FeedFill>>(
+    `/feed/global?limit=${limit}&offset=${offset}`
+  );
+}

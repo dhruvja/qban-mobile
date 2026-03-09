@@ -15,18 +15,18 @@ import Animated, {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { fetchTraderPositions, fetchTraderFills } from "../../src/api/client";
+import { fetchTraderPositions, fetchTraderFills, fetchProfile, type ApiUserProfile } from "../../src/api/client";
 import { baseAtomsToSol } from "../../src/constants";
 import { getMarketPda } from "../../src/solana/market-instructions";
-
-const [MARKET_ADDRESS] = getMarketPda();
-const MARKET_STR = MARKET_ADDRESS.toBase58();
 import {
   isFollowing as checkFollowing,
   followTrader,
   unfollowTrader,
-  getFollowedTraders,
 } from "../../src/services/followStorage";
+import { useAuth } from "../../src/providers/AuthProvider";
+
+const [MARKET_ADDRESS] = getMarketPda();
+const MARKET_STR = MARKET_ADDRESS.toBase58();
 function formatUsd(v: number): string {
   return `$${v.toFixed(2)}`;
 }
@@ -58,6 +58,8 @@ function traderUsername(addr: string): string {
 
 export default function TraderProfileScreen() {
   const { address } = useLocalSearchParams<{ address: string }>();
+  const { walletAddress } = useAuth();
+  const [profile, setProfile] = useState<ApiUserProfile | null>(null);
   const [fills, setFills] = useState<Awaited<ReturnType<typeof fetchTraderFills>>>([]);
   const [fillsLoading, setFillsLoading] = useState(true);
   const [positionSide, setPositionSide] = useState<string>("flat");
@@ -66,6 +68,7 @@ export default function TraderProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const followScale = useSharedValue(1);
   const followAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: followScale.value }],
@@ -75,25 +78,35 @@ export default function TraderProfileScreen() {
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
     : "—";
 
-  // Load follow state from AsyncStorage
+  // Load profile and follow state from API
   useEffect(() => {
-    if (address) {
-      checkFollowing(address).then(setFollowing);
-      // Show 1 if we're following, 0 otherwise (local-only, no backend yet)
-      checkFollowing(address).then((isF) => setFollowerCount(isF ? 1 : 0));
+    if (!address) return;
+    fetchProfile(address)
+      .then((p) => {
+        setProfile(p);
+        setFollowerCount(p.follower_count);
+        setFollowingCount(p.following_count);
+      })
+      .catch(() => {});
+    if (walletAddress) {
+      checkFollowing(address, walletAddress).then(setFollowing);
     }
-  }, [address]);
+  }, [address, walletAddress]);
 
   const handleToggleFollow = async () => {
-    if (!address) return;
-    if (following) {
-      await unfollowTrader(address);
-      setFollowing(false);
-      setFollowerCount((c) => Math.max(0, c - 1));
-    } else {
-      await followTrader(address);
-      setFollowing(true);
-      setFollowerCount((c) => c + 1);
+    if (!address || !walletAddress) return;
+    try {
+      if (following) {
+        await unfollowTrader(address, walletAddress);
+        setFollowing(false);
+        setFollowerCount((c) => Math.max(0, c - 1));
+      } else {
+        await followTrader(address, walletAddress);
+        setFollowing(true);
+        setFollowerCount((c) => c + 1);
+      }
+    } catch (err) {
+      console.error("[follow] error:", err);
     }
     followScale.value = withSequence(
       withSpring(1.3, { damping: 8, stiffness: 300 }),
@@ -182,7 +195,7 @@ export default function TraderProfileScreen() {
             </Text>
           </View>
           <Text className="font-dm-bold text-base text-qban-yellow mb-0.5">
-            {address ? traderUsername(address) : "—"}
+            {profile?.username ? `@${profile.username}` : address ? traderUsername(address) : "—"}
           </Text>
           <Text className="font-space text-sm text-qban-smoke-dark mb-1">
             {shortAddr}
@@ -254,6 +267,14 @@ export default function TraderProfileScreen() {
             </Text>
             <Text className="font-dm text-xs text-qban-smoke-dark">
               Followers
+            </Text>
+          </View>
+          <View className="flex-1 items-center">
+            <Text className="font-space text-lg text-qban-white">
+              {followingCount}
+            </Text>
+            <Text className="font-dm text-xs text-qban-smoke-dark">
+              Following
             </Text>
           </View>
         </View>

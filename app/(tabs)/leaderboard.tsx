@@ -10,36 +10,25 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { SkeletonRow } from "../../src/components/Skeleton";
 import { router } from "expo-router";
-import { usePythPrice } from "../../src/hooks/usePythPrice";
 import { useLeaderboard } from "../../src/hooks/useLeaderboard";
 import { useAuth } from "../../src/providers/AuthProvider";
-import { fetchAllTraderFills } from "../../src/api/client";
-import { getFollowedTraders } from "../../src/services/followStorage";
+import {
+  fetchGlobalFeed,
+  fetchFriendsFeed,
+  type LeaderboardEntry,
+  type FeedFill,
+} from "../../src/api/client";
 import { apiPriceToUsd, baseAtomsToSol } from "../../src/constants";
-import { getMarketPda } from "../../src/solana/market-instructions";
-import type { LeaderboardPeriod } from "../../src/types";
-
-const [MARKET_ADDRESS] = getMarketPda();
-const MARKET_STR = MARKET_ADDRESS.toBase58();
+import { getFollowedTraders } from "../../src/services/followStorage";
 
 function formatUsd(v: number): string {
-  if (Math.abs(v) >= 1000)
-    return `$${(v / 1000).toFixed(1)}K`;
+  if (Math.abs(v) >= 1000) return `$${(v / 1000).toFixed(1)}K`;
   return `$${v.toFixed(2)}`;
 }
 
 /** Generate a deterministic @username from a wallet address */
 function traderUsername(addr: string): string {
   return `@${addr.slice(0, 4).toLowerCase()}${addr.slice(-4).toLowerCase()}`;
-}
-
-interface FeedActivity {
-  id: string;
-  trader: string;
-  side: "buy" | "sell";
-  price: number;
-  size: number;
-  timestamp: number;
 }
 
 function timeAgo(ts: number): string {
@@ -54,8 +43,9 @@ function timeAgo(ts: number): string {
 }
 
 type Tab = "top" | "friends" | "feed";
+type Period = "all" | "week" | "month";
 
-const TIME_FILTERS: { label: string; value: LeaderboardPeriod }[] = [
+const TIME_FILTERS: { label: string; value: Period }[] = [
   { label: "All", value: "all" },
   { label: "Week", value: "week" },
   { label: "Month", value: "month" },
@@ -63,116 +53,263 @@ const TIME_FILTERS: { label: string; value: LeaderboardPeriod }[] = [
 
 export default function LeaderboardScreen() {
   const [tab, setTab] = useState<Tab>("top");
-  const [period, setPeriod] = useState<LeaderboardPeriod>("all");
+  const [period, setPeriod] = useState<Period>("all");
   const [refreshing, setRefreshing] = useState(false);
-  const { price: currentPrice } = usePythPrice();
   const { walletAddress } = useAuth();
 
-  // Use the leaderboard hook (matches perp-ui logic)
   const {
-    traders,
+    entries,
     totalVolume,
     loading: leaderboardLoading,
     refresh: refreshLeaderboard,
-  } = useLeaderboard(MARKET_STR, period, currentPrice ?? 0);
+  } = useLeaderboard(period);
 
+  // Friends tab: filter leaderboard by followed addresses
   const [followedAddresses, setFollowedAddresses] = useState<string[]>([]);
-  const [allFills, setAllFills] = useState<
-    Array<{
-      id?: string;
-      signature?: string;
-      price: string | number;
-      base_atoms: number;
-      taker_is_buy: boolean;
-      block_time: string;
-      taker?: string;
-      maker?: string;
-    }>
-  >([]);
-  const [reactions, setReactions] = useState<Record<string, { eyes: number; fire: number }>>({});
-  const [myReactions, setMyReactions] = useState<Record<string, Set<"eyes" | "fire">>>({});
+
+  // Feed tab: use API feed endpoints
+  const [feedItems, setFeedItems] = useState<FeedFill[]>([]);
+  const [feedLoading, setFeedLoading] = useState(false);
+
+  const [reactions, setReactions] = useState<
+    Record<string, { eyes: number; fire: number }>
+  >({});
+  const [myReactions, setMyReactions] = useState<
+    Record<string, Set<"eyes" | "fire">>
+  >({});
 
   const loadFollows = useCallback(async () => {
-    const follows = await getFollowedTraders();
+    if (!walletAddress) return;
+    const follows = await getFollowedTraders(walletAddress);
     setFollowedAddresses(follows);
-  }, []);
+  }, [walletAddress]);
 
-  const loadFills = useCallback(async () => {
+  const loadFeed = useCallback(async () => {
     try {
-      const fills = await fetchAllTraderFills(MARKET_STR);
-      setAllFills(fills);
+      setFeedLoading(true);
+      const data = walletAddress
+        ? await fetchFriendsFeed(walletAddress, 100)
+        : await fetchGlobalFeed(100);
+      setFeedItems(data.items);
     } catch {
-      // silently fail
+      // If friends feed is empty or fails, fall back to global
+      try {
+        const data = await fetchGlobalFeed(100);
+        setFeedItems(data.items);
+      } catch {
+        // silently fail
+      }
+    } finally {
+      setFeedLoading(false);
     }
-  }, []);
+  }, [walletAddress]);
 
   useEffect(() => {
     loadFollows();
-    loadFills();
-  }, [loadFollows, loadFills]);
+  }, [loadFollows]);
 
-  // Reload follows when switching to Friends tab
   useEffect(() => {
     if (tab === "friends") {
       loadFollows();
     }
-  }, [tab, loadFollows]);
+    if (tab === "feed") {
+      loadFeed();
+    }
+  }, [tab, loadFollows, loadFeed]);
 
-  const friendTraders = useMemo(() => {
+  const friendEntries = useMemo(() => {
     if (followedAddresses.length === 0) return [];
     const followSet = new Set(followedAddresses);
-    return traders.filter((t) => followSet.has(t.trader));
-  }, [traders, followedAddresses]);
-
-  const feedItems = useMemo<FeedActivity[]>(() => {
-    return allFills
-      .filter((f) => f.block_time)
-      .map((fill, index) => ({
-        id: fill.id ?? fill.signature ?? String(index),
-        trader: fill.taker ?? fill.maker ?? "unknown",
-        side: fill.taker_is_buy ? ("buy" as const) : ("sell" as const),
-        price: apiPriceToUsd(fill.price),
-        size: baseAtomsToSol(fill.base_atoms),
-        timestamp: new Date(fill.block_time).getTime(),
-      }))
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 100);
-  }, [allFills]);
+    return entries.filter((e) => followSet.has(e.address));
+  }, [entries, followedAddresses]);
 
   const myRank = useMemo(() => {
     if (!walletAddress) return null;
-    return traders.find((t) => t.trader === walletAddress) ?? null;
-  }, [traders, walletAddress]);
+    return entries.find((e) => e.address === walletAddress) ?? null;
+  }, [entries, walletAddress]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refreshLeaderboard(), loadFollows(), loadFills()]);
+    const promises = [refreshLeaderboard(), loadFollows()];
+    if (tab === "feed") promises.push(loadFeed());
+    await Promise.all(promises);
     setRefreshing(false);
-  }, [refreshLeaderboard, loadFollows, loadFills]);
+  }, [refreshLeaderboard, loadFollows, loadFeed, tab]);
 
-  const toggleReaction = useCallback((itemId: string, type: "eyes" | "fire") => {
-    setMyReactions((prev) => {
-      const current = prev[itemId] ?? new Set();
-      const next = new Set(current);
-      const wasActive = next.has(type);
-      if (wasActive) {
-        next.delete(type);
-      } else {
-        next.add(type);
-      }
-      setReactions((r) => {
-        const cur = r[itemId] ?? { eyes: 0, fire: 0 };
-        return {
-          ...r,
-          [itemId]: {
-            ...cur,
-            [type]: cur[type] + (wasActive ? -1 : 1),
-          },
-        };
+  const toggleReaction = useCallback(
+    (itemId: string, type: "eyes" | "fire") => {
+      setMyReactions((prev) => {
+        const current = prev[itemId] ?? new Set();
+        const next = new Set(current);
+        const wasActive = next.has(type);
+        if (wasActive) {
+          next.delete(type);
+        } else {
+          next.add(type);
+        }
+        setReactions((r) => {
+          const cur = r[itemId] ?? { eyes: 0, fire: 0 };
+          return {
+            ...r,
+            [itemId]: {
+              ...cur,
+              [type]: cur[type] + (wasActive ? -1 : 1),
+            },
+          };
+        });
+        return { ...prev, [itemId]: next };
       });
-      return { ...prev, [itemId]: next };
-    });
-  }, []);
+    },
+    []
+  );
+
+  const renderLeaderboardItem = useCallback(
+    ({ item, index }: { item: LeaderboardEntry; index: number }) => {
+      const volume = parseFloat(item.volume_quote || "0") / 1e6;
+      const pnl = item.realized_pnl / 1e6;
+      return (
+        <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
+          <Pressable
+            className="flex-row items-center py-3.5 border-b border-qban-charcoal active:opacity-80"
+            onPress={() => router.push(`/trader/${item.address}` as never)}
+          >
+            {/* Rank */}
+            <View className="w-8 items-center">
+              <Text
+                className={`font-space text-sm ${
+                  item.rank <= 3
+                    ? "text-qban-yellow"
+                    : "text-qban-smoke-dark"
+                }`}
+              >
+                {item.rank}
+              </Text>
+            </View>
+
+            {/* Avatar + Name */}
+            <View className="flex-1 ml-3">
+              <View className="flex-row items-center gap-2">
+                <View className="w-8 h-8 rounded-full bg-qban-charcoal items-center justify-center">
+                  <Text className="font-dm-bold text-xs text-qban-smoke">
+                    {item.address.slice(0, 2).toUpperCase()}
+                  </Text>
+                </View>
+                <View>
+                  <Text className="font-dm text-sm text-qban-yellow">
+                    {item.username
+                      ? `@${item.username}`
+                      : traderUsername(item.address)}
+                  </Text>
+                  <Text className="font-space text-xs text-qban-smoke-dark">
+                    {item.num_trades} trades · Vol {formatUsd(volume)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* P&L */}
+            <Text
+              className={`font-space text-sm ${
+                pnl >= 0 ? "text-qban-green" : "text-qban-red"
+              }`}
+            >
+              {pnl >= 0 ? "+" : ""}
+              {formatUsd(pnl)}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      );
+    },
+    []
+  );
+
+  const renderFeedItem = useCallback(
+    ({ item }: { item: FeedFill }) => {
+      const price = apiPriceToUsd(item.price);
+      const size = baseAtomsToSol(item.base_atoms);
+      const notional = size * price;
+      const trader = item.taker;
+      const isBuy = item.taker_is_buy;
+      const ts = new Date(item.block_time).getTime();
+      const itemId = String(item.id);
+      const displayName =
+        item.taker_username
+          ? `@${item.taker_username}`
+          : traderUsername(trader);
+
+      return (
+        <Pressable
+          className="py-3.5 border-b border-qban-charcoal active:opacity-80"
+          onPress={() => router.push(`/trader/${trader}` as never)}
+        >
+          <View className="flex-row items-center justify-between mb-1.5">
+            <View className="flex-row items-center gap-2">
+              <View className="w-8 h-8 rounded-full bg-qban-charcoal items-center justify-center">
+                <Text className="font-dm-bold text-xs text-qban-smoke">
+                  {trader.slice(0, 2).toUpperCase()}
+                </Text>
+              </View>
+              <Text className="font-dm text-sm text-qban-yellow">
+                {displayName}
+              </Text>
+            </View>
+            <Text className="font-space text-xs text-qban-smoke-dark">
+              {timeAgo(ts)}
+            </Text>
+          </View>
+          <View className="ml-10">
+            <Text className="font-dm text-sm text-qban-white">
+              {isBuy ? "Bought" : "Sold"}{" "}
+              <Text
+                className={isBuy ? "text-qban-green" : "text-qban-red"}
+              >
+                {size.toFixed(3)} SOL
+              </Text>{" "}
+              at ${price.toFixed(2)}
+            </Text>
+            <View className="flex-row items-center justify-between mt-1.5">
+              <Text className="font-space text-xs text-qban-smoke-dark">
+                ${notional.toFixed(2)} notional
+              </Text>
+              <View className="flex-row gap-2">
+                <Pressable
+                  className={`flex-row items-center rounded-full px-2 py-0.5 ${
+                    myReactions[itemId]?.has("eyes")
+                      ? "bg-qban-yellow/20"
+                      : "bg-qban-charcoal"
+                  }`}
+                  onPress={() => toggleReaction(itemId, "eyes")}
+                >
+                  <Text className="text-xs">👀</Text>
+                  {(reactions[itemId]?.eyes ?? 0) > 0 && (
+                    <Text className="font-space text-xs text-qban-smoke ml-1">
+                      {reactions[itemId].eyes}
+                    </Text>
+                  )}
+                </Pressable>
+                <Pressable
+                  className={`flex-row items-center rounded-full px-2 py-0.5 ${
+                    myReactions[itemId]?.has("fire")
+                      ? "bg-qban-yellow/20"
+                      : "bg-qban-charcoal"
+                  }`}
+                  onPress={() => toggleReaction(itemId, "fire")}
+                >
+                  <Text className="text-xs">🔥</Text>
+                  {(reactions[itemId]?.fire ?? 0) > 0 && (
+                    <Text className="font-space text-xs text-qban-smoke ml-1">
+                      {reactions[itemId].fire}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Pressable>
+      );
+    },
+    [reactions, myReactions, toggleReaction]
+  );
 
   return (
     <SafeAreaView className="flex-1 bg-qban-black" edges={["top"]}>
@@ -203,7 +340,11 @@ export default function LeaderboardScreen() {
                 tab === t ? "text-qban-yellow" : "text-qban-smoke-dark"
               }`}
             >
-              {t === "top" ? "Top Traders" : t === "friends" ? "Friends" : "Feed"}
+              {t === "top"
+                ? "Top Traders"
+                : t === "friends"
+                  ? "Friends"
+                  : "Feed"}
             </Text>
           </Pressable>
         ))}
@@ -237,8 +378,8 @@ export default function LeaderboardScreen() {
           </View>
 
           <FlatList
-            data={traders}
-            keyExtractor={(item) => item.trader}
+            data={entries}
+            keyExtractor={(item) => item.address}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -246,80 +387,11 @@ export default function LeaderboardScreen() {
                 tintColor="#F5C518"
               />
             }
-            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 80 }}
-            renderItem={({ item, index }) => (
-              <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
-              <Pressable
-                className="flex-row items-center py-3.5 border-b border-qban-charcoal active:opacity-80"
-                onPress={() => router.push(`/trader/${item.trader}` as never)}
-              >
-                {/* Rank */}
-                <View className="w-8 items-center">
-                  <Text
-                    className={`font-space text-sm ${
-                      item.rank <= 3
-                        ? "text-qban-yellow"
-                        : "text-qban-smoke-dark"
-                    }`}
-                  >
-                    {item.rank}
-                  </Text>
-                </View>
-
-                {/* Avatar + Name */}
-                <View className="flex-1 ml-3">
-                  <View className="flex-row items-center gap-2">
-                    <View className="w-8 h-8 rounded-full bg-qban-charcoal items-center justify-center">
-                      <Text className="font-dm-bold text-xs text-qban-smoke">
-                        {item.trader.slice(0, 2).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View>
-                      <View className="flex-row items-center gap-1.5">
-                        <Text className="font-dm text-sm text-qban-yellow">
-                          {traderUsername(item.trader)}
-                        </Text>
-                        {item.side !== "flat" && (
-                          <View
-                            className={`rounded-full px-1.5 py-0.5 ${
-                              item.side === "long"
-                                ? "bg-qban-green/15"
-                                : "bg-qban-red/15"
-                            }`}
-                          >
-                            <Text
-                              className={`font-space text-[10px] ${
-                                item.side === "long"
-                                  ? "text-qban-green"
-                                  : "text-qban-red"
-                              }`}
-                            >
-                              {item.side === "long" ? "LONG" : "SHORT"}{" "}
-                              {item.positionSize.toFixed(2)}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text className="font-space text-xs text-qban-smoke-dark">
-                        {item.trades} trades · Vol{" "}
-                        {formatUsd(item.volume)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* P&L */}
-                <Text
-                  className={`font-space text-sm ${
-                    item.pnl >= 0 ? "text-qban-green" : "text-qban-red"
-                  }`}
-                >
-                  {item.pnl >= 0 ? "+" : ""}
-                  {formatUsd(item.pnl)}
-                </Text>
-              </Pressable>
-              </Animated.View>
-            )}
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              paddingBottom: 80,
+            }}
+            renderItem={renderLeaderboardItem}
             ListEmptyComponent={
               leaderboardLoading ? (
                 <View className="px-0">
@@ -341,8 +413,8 @@ export default function LeaderboardScreen() {
 
       {tab === "friends" && (
         <FlatList
-          data={friendTraders}
-          keyExtractor={(item) => item.trader}
+          data={friendEntries}
+          keyExtractor={(item) => item.address}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -350,48 +422,12 @@ export default function LeaderboardScreen() {
               tintColor="#F5C518"
             />
           }
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 80, flexGrow: 1 }}
-          renderItem={({ item }) => (
-            <Pressable
-              className="flex-row items-center py-3.5 border-b border-qban-charcoal active:opacity-80"
-              onPress={() => router.push(`/trader/${item.trader}` as never)}
-            >
-              <View className="w-8 items-center">
-                <Text
-                  className={`font-space text-sm ${
-                    item.rank <= 3 ? "text-qban-yellow" : "text-qban-smoke-dark"
-                  }`}
-                >
-                  #{item.rank}
-                </Text>
-              </View>
-              <View className="flex-1 ml-3">
-                <View className="flex-row items-center gap-2">
-                  <View className="w-8 h-8 rounded-full bg-qban-charcoal items-center justify-center">
-                    <Text className="font-dm-bold text-xs text-qban-smoke">
-                      {item.trader.slice(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text className="font-dm text-sm text-qban-yellow">
-                      {traderUsername(item.trader)}
-                    </Text>
-                    <Text className="font-space text-xs text-qban-smoke-dark">
-                      {item.trades} trades · Vol {formatUsd(item.volume)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <Text
-                className={`font-space text-sm ${
-                  item.pnl >= 0 ? "text-qban-green" : "text-qban-red"
-                }`}
-              >
-                {item.pnl >= 0 ? "+" : ""}
-                {formatUsd(item.pnl)}
-              </Text>
-            </Pressable>
-          )}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingBottom: 80,
+            flexGrow: 1,
+          }}
+          renderItem={renderLeaderboardItem}
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center">
               <Text className="font-dm text-base text-qban-smoke mb-2">
@@ -416,7 +452,7 @@ export default function LeaderboardScreen() {
       {tab === "feed" && (
         <FlatList
           data={feedItems}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -424,81 +460,26 @@ export default function LeaderboardScreen() {
               tintColor="#F5C518"
             />
           }
-          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 80, flexGrow: 1 }}
-          renderItem={({ item }) => (
-            <Pressable
-              className="py-3.5 border-b border-qban-charcoal active:opacity-80"
-              onPress={() => router.push(`/trader/${item.trader}` as never)}
-            >
-              <View className="flex-row items-center justify-between mb-1.5">
-                <View className="flex-row items-center gap-2">
-                  <View className="w-8 h-8 rounded-full bg-qban-charcoal items-center justify-center">
-                    <Text className="font-dm-bold text-xs text-qban-smoke">
-                      {item.trader.slice(0, 2).toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text className="font-dm text-sm text-qban-yellow">
-                    {traderUsername(item.trader)}
-                  </Text>
-                </View>
-                <Text className="font-space text-xs text-qban-smoke-dark">
-                  {timeAgo(item.timestamp)}
-                </Text>
-              </View>
-              <View className="ml-10">
-                <Text className="font-dm text-sm text-qban-white">
-                  {item.side === "buy" ? "Bought" : "Sold"}{" "}
-                  <Text className={item.side === "buy" ? "text-qban-green" : "text-qban-red"}>
-                    {item.size.toFixed(3)} SOL
-                  </Text>
-                  {" "}at ${item.price.toFixed(2)}
-                </Text>
-                <View className="flex-row items-center justify-between mt-1.5">
-                  <Text className="font-space text-xs text-qban-smoke-dark">
-                    ${(item.size * item.price).toFixed(2)} notional
-                  </Text>
-                  <View className="flex-row gap-2">
-                    <Pressable
-                      className={`flex-row items-center rounded-full px-2 py-0.5 ${
-                        myReactions[item.id]?.has("eyes")
-                          ? "bg-qban-yellow/20"
-                          : "bg-qban-charcoal"
-                      }`}
-                      onPress={() => toggleReaction(item.id, "eyes")}
-                    >
-                      <Text className="text-xs">👀</Text>
-                      {(reactions[item.id]?.eyes ?? 0) > 0 && (
-                        <Text className="font-space text-xs text-qban-smoke ml-1">
-                          {reactions[item.id].eyes}
-                        </Text>
-                      )}
-                    </Pressable>
-                    <Pressable
-                      className={`flex-row items-center rounded-full px-2 py-0.5 ${
-                        myReactions[item.id]?.has("fire")
-                          ? "bg-qban-yellow/20"
-                          : "bg-qban-charcoal"
-                      }`}
-                      onPress={() => toggleReaction(item.id, "fire")}
-                    >
-                      <Text className="text-xs">🔥</Text>
-                      {(reactions[item.id]?.fire ?? 0) > 0 && (
-                        <Text className="font-space text-xs text-qban-smoke ml-1">
-                          {reactions[item.id].fire}
-                        </Text>
-                      )}
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </Pressable>
-          )}
+          contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingBottom: 80,
+            flexGrow: 1,
+          }}
+          renderItem={renderFeedItem}
           ListEmptyComponent={
-            <View className="flex-1 items-center justify-center">
-              <Text className="font-dm text-sm text-qban-smoke-dark">
-                Nothing happening yet. Be the first to trade!
-              </Text>
-            </View>
+            feedLoading ? (
+              <View className="px-0">
+                {[...Array(4)].map((_, i) => (
+                  <SkeletonRow key={i} />
+                ))}
+              </View>
+            ) : (
+              <View className="flex-1 items-center justify-center">
+                <Text className="font-dm text-sm text-qban-smoke-dark">
+                  Nothing happening yet. Be the first to trade!
+                </Text>
+              </View>
+            )
           }
         />
       )}
@@ -516,7 +497,9 @@ export default function LeaderboardScreen() {
               <View className="flex-row items-center gap-2">
                 <View className="w-8 h-8 rounded-full bg-qban-yellow/20 items-center justify-center">
                   <Text className="font-dm-bold text-xs text-qban-yellow">
-                    {walletAddress ? walletAddress.slice(0, 2).toUpperCase() : "??"}
+                    {walletAddress
+                      ? walletAddress.slice(0, 2).toUpperCase()
+                      : "??"}
                   </Text>
                 </View>
                 <View>
@@ -525,7 +508,9 @@ export default function LeaderboardScreen() {
                   </Text>
                   <Text className="font-space text-xs text-qban-smoke-dark">
                     {myRank
-                      ? `${myRank.trades} trades · Vol ${formatUsd(myRank.volume)}`
+                      ? `${myRank.num_trades} trades · Vol ${formatUsd(
+                          parseFloat(myRank.volume_quote || "0") / 1e6
+                        )}`
                       : "No trades yet"}
                   </Text>
                 </View>
@@ -533,11 +518,17 @@ export default function LeaderboardScreen() {
             </View>
             <Text
               className={`font-space text-sm ${
-                myRank && myRank.pnl >= 0 ? "text-qban-green" : myRank ? "text-qban-red" : "text-qban-smoke-dark"
+                myRank && myRank.realized_pnl >= 0
+                  ? "text-qban-green"
+                  : myRank
+                    ? "text-qban-red"
+                    : "text-qban-smoke-dark"
               }`}
             >
               {myRank
-                ? `${myRank.pnl >= 0 ? "+" : ""}${formatUsd(myRank.pnl)}`
+                ? `${myRank.realized_pnl >= 0 ? "+" : ""}${formatUsd(
+                    myRank.realized_pnl / 1e6
+                  )}`
                 : "$0.00"}
             </Text>
           </View>

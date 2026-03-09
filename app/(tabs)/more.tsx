@@ -5,11 +5,10 @@ import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import Toast from "react-native-toast-message";
 import { useAuth } from "../../src/providers/AuthProvider";
-import { getProfile } from "../../src/services/profileStorage";
-import { setProfilePromptShown } from "../../src/services/profileStorage";
+import { getProfile, setProfilePromptShown } from "../../src/services/profileStorage";
 import ProfileSetupSheet from "../../src/components/ProfileSetupSheet";
 import { useCallback, useEffect, useState } from "react";
-import type { UserProfile } from "../../src/types";
+import type { ApiUserProfile } from "../../src/api/client";
 
 function SettingsRow({
   label,
@@ -64,13 +63,14 @@ function generateReferralCode(walletAddress: string): string {
 export default function MoreScreen() {
   const { walletAddress, logout } = useAuth();
   const [referralCopied, setReferralCopied] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<ApiUserProfile | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   const loadProfile = useCallback(async () => {
-    const p = await getProfile();
+    if (!walletAddress) return;
+    const p = await getProfile(walletAddress);
     setProfile(p);
-  }, []);
+  }, [walletAddress]);
 
   useEffect(() => {
     loadProfile();
@@ -122,9 +122,9 @@ export default function MoreScreen() {
 
         {/* Profile Section */}
         <View className="items-center py-6">
-          {profile?.pfp_url ? (
+          {profile?.image_url ? (
             <Image
-              source={{ uri: profile.pfp_url }}
+              source={{ uri: profile.image_url }}
               className="w-16 h-16 rounded-full mb-3"
             />
           ) : (
@@ -139,11 +139,6 @@ export default function MoreScreen() {
               <Text className="font-dm-medium text-base text-qban-yellow">
                 @{profile.username}
               </Text>
-              {profile.bio ? (
-                <Text className="font-dm text-sm text-qban-smoke mt-1">
-                  {profile.bio}
-                </Text>
-              ) : null}
             </>
           ) : (
             <Text className="font-space text-base text-qban-white">

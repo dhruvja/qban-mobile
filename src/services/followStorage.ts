@@ -1,27 +1,43 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  followUser,
+  unfollowUser,
+  fetchFollowing,
+  fetchProfile,
+} from "../api/client";
 
-const FOLLOWS_KEY = "qban_follows";
-
-export async function getFollowedTraders(): Promise<string[]> {
-  const data = await AsyncStorage.getItem(FOLLOWS_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-export async function followTrader(address: string): Promise<void> {
-  const current = await getFollowedTraders();
-  if (!current.includes(address)) {
-    current.push(address);
-    await AsyncStorage.setItem(FOLLOWS_KEY, JSON.stringify(current));
+export async function getFollowedTraders(
+  myAddress: string
+): Promise<string[]> {
+  try {
+    const data = await fetchFollowing(myAddress, 200);
+    return data.items.map((u) => u.address);
+  } catch {
+    return [];
   }
 }
 
-export async function unfollowTrader(address: string): Promise<void> {
-  const current = await getFollowedTraders();
-  const filtered = current.filter((a) => a !== address);
-  await AsyncStorage.setItem(FOLLOWS_KEY, JSON.stringify(filtered));
+export async function followTrader(
+  targetAddress: string,
+  myAddress: string
+): Promise<void> {
+  await followUser(targetAddress, myAddress);
 }
 
-export async function isFollowing(address: string): Promise<boolean> {
-  const current = await getFollowedTraders();
-  return current.includes(address);
+export async function unfollowTrader(
+  targetAddress: string,
+  myAddress: string
+): Promise<void> {
+  await unfollowUser(targetAddress, myAddress);
+}
+
+export async function isFollowing(
+  targetAddress: string,
+  myAddress: string
+): Promise<boolean> {
+  try {
+    const following = await getFollowedTraders(myAddress);
+    return following.includes(targetAddress);
+  } catch {
+    return false;
+  }
 }
