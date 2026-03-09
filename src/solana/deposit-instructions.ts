@@ -228,17 +228,14 @@ async function waitForAccountOnDevnet(
 }
 
 type SignTransactionFn = (tx: Transaction) => Promise<Transaction>;
-type SendTransactionFn = (
-  tx: Transaction | import("@solana/web3.js").VersionedTransaction,
-  connection: Connection
-) => Promise<string>;
 
 /**
  * Full deposit flow: deposit USDC into platform margin.
  * Handles ephemeral ATA init, delegation, and margin deposit.
  *
- * Uses sendTransaction for devnet txs (wallet signs+sends to correct cluster)
- * and signTransaction for MagicBlock txs (we send to MagicBlock RPC ourselves).
+ * Uses signTransaction (sign-only) for all txs — we send to the correct
+ * RPC ourselves. Wallet signAndSendTransactions misdetects custom programs
+ * as mainnet and blocks the transaction.
  */
 export async function depositFlow({
   publicKey,
@@ -246,14 +243,12 @@ export async function depositFlow({
   magicblockConnection,
   amount,
   signTransaction,
-  sendTransaction,
 }: {
   publicKey: PublicKey;
   devnetConnection: Connection;
   magicblockConnection: Connection;
   amount: number;
   signTransaction: SignTransactionFn;
-  sendTransaction: SendTransactionFn;
 }): Promise<{ step: string; signature: string }[]> {
   const results: { step: string; signature: string }[] = [];
 
@@ -299,8 +294,12 @@ export async function depositFlow({
   depositTx.recentBlockhash = devnetBlockhash.blockhash;
   depositTx.feePayer = publicKey;
 
-  // Devnet tx — wallet signs + sends to devnet cluster
-  const depositSig = await sendTransaction(depositTx, devnetConnection);
+  // Devnet tx — sign only, we send to devnet RPC
+  const signedDeposit = await signTransaction(depositTx);
+  const depositSig = await devnetConnection.sendRawTransaction(
+    signedDeposit.serialize(),
+    { skipPreflight: true }
+  );
   await devnetConnection.confirmTransaction(
     { signature: depositSig, ...devnetBlockhash },
     "confirmed"

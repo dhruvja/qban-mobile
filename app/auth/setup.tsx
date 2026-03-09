@@ -24,7 +24,7 @@ type SetupStep =
 export default function SetupScreen() {
   const { walletAddress } = useAuth();
   const { devnetConnection, magicblockConnection } = useConnections();
-  const { signTransaction, sendTransaction } = useUnifiedWallet();
+  const { signTransaction } = useUnifiedWallet();
   const [step, setStep] = useState<SetupStep>("checking_balance");
   const [error, setError] = useState<string | null>(null);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
@@ -96,7 +96,6 @@ export default function SetupScreen() {
         magicblockConnection,
         amount: depositAmount,
         signTransaction,
-        sendTransaction,
       });
       console.log("[setup] Deposit results:", results);
       await promptProfileIfNeeded();
