@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
+import { useAuth } from "../../src/providers/AuthProvider";
 import { fetchAllTraderFills } from "../../src/api/client";
 import { apiPriceToUsd, baseAtomsToSol } from "../../src/constants";
 import type { LeaderboardPeriod, LeaderboardTrader } from "../../src/types";
@@ -50,6 +51,7 @@ export default function LeaderboardScreen() {
   const [allFills, setAllFills] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const { price: currentPrice } = usePythPrice();
+  const { walletAddress } = useAuth();
 
   const loadFills = useCallback(async () => {
     try {
@@ -122,6 +124,11 @@ export default function LeaderboardScreen() {
       .sort((a, b) => b.pnl - a.pnl)
       .map((t, i) => ({ ...t, rank: i + 1 }));
   }, [allFills, currentPrice, period]);
+
+  const myRank = useMemo(() => {
+    if (!walletAddress) return null;
+    return traders.find((t) => t.trader === walletAddress) ?? null;
+  }, [traders, walletAddress]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -273,6 +280,47 @@ export default function LeaderboardScreen() {
           <Text className="font-dm text-sm text-qban-smoke-dark">
             Trade activity will appear here
           </Text>
+        </View>
+      )}
+
+      {/* Sticky Your Rank footer */}
+      {tab === "top" && (
+        <View className="px-6 py-3 bg-qban-charcoal border-t border-qban-charcoal">
+          <View className="flex-row items-center">
+            <View className="w-8 items-center">
+              <Text className="font-space text-sm text-qban-yellow">
+                {myRank ? myRank.rank : "—"}
+              </Text>
+            </View>
+            <View className="flex-1 ml-3">
+              <View className="flex-row items-center gap-2">
+                <View className="w-8 h-8 rounded-full bg-qban-yellow/20 items-center justify-center">
+                  <Text className="font-dm-bold text-xs text-qban-yellow">
+                    {walletAddress ? walletAddress.slice(0, 2).toUpperCase() : "??"}
+                  </Text>
+                </View>
+                <View>
+                  <Text className="font-dm-medium text-sm text-qban-yellow">
+                    Your Rank
+                  </Text>
+                  <Text className="font-space text-xs text-qban-smoke-dark">
+                    {myRank
+                      ? `${myRank.trades} trades · Vol ${formatUsd(myRank.volume)}`
+                      : "No trades yet"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <Text
+              className={`font-space text-sm ${
+                myRank && myRank.pnl >= 0 ? "text-qban-green" : myRank ? "text-qban-red" : "text-qban-smoke-dark"
+              }`}
+            >
+              {myRank
+                ? `${myRank.pnl >= 0 ? "+" : ""}${formatUsd(myRank.pnl)}`
+                : "$0.00"}
+            </Text>
+          </View>
         </View>
       )}
     </SafeAreaView>
