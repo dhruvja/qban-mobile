@@ -9,11 +9,14 @@ import { getMarginBalance } from "../../src/solana/market-instructions";
 import { getTokenBalance, airdropUsdc, depositFlow } from "../../src/solana/deposit-instructions";
 import { AIRDROP_AMOUNT } from "../../src/solana/constants";
 import { useUnifiedWallet } from "../../src/providers/UnifiedWalletProvider";
+import { hasCompletedProfile } from "../../src/services/profileStorage";
+import ProfileSetupSheet from "../../src/components/ProfileSetupSheet";
 
 type SetupStep =
   | "checking_balance"
   | "airdropping"
   | "depositing"
+  | "profile"
   | "done"
   | "error";
 
@@ -23,6 +26,7 @@ export default function SetupScreen() {
   const { signTransaction } = useUnifiedWallet();
   const [step, setStep] = useState<SetupStep>("checking_balance");
   const [error, setError] = useState<string | null>(null);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
   const started = useRef(false);
 
   useEffect(() => {
@@ -45,8 +49,8 @@ export default function SetupScreen() {
     console.log("[setup] Margin balance:", position?.marginUsd ?? 0);
 
     if (position && position.marginUsd > 0) {
-      setStep("done");
-      router.replace("/(tabs)");
+      // Existing user — check if profile exists, if so skip to tabs
+      await promptProfileIfNeeded();
       return;
     }
 
@@ -79,14 +83,26 @@ export default function SetupScreen() {
     });
     console.log("[setup] Deposit results:", results);
 
-    setStep("done");
-    router.replace("/(tabs)");
+    // Step 5: Prompt profile setup
+    await promptProfileIfNeeded();
+  }
+
+  async function promptProfileIfNeeded() {
+    const profileDone = await hasCompletedProfile(walletAddress!);
+    if (profileDone) {
+      setStep("done");
+      router.replace("/(tabs)");
+    } else {
+      setStep("profile");
+      setShowProfileSetup(true);
+    }
   }
 
   const stepMessages: Record<SetupStep, string> = {
     checking_balance: "Checking your balance...",
     airdropping: "Setting up your account...",
     depositing: "Depositing funds...",
+    profile: "Almost there...",
     done: "All set!",
     error: "Something went wrong",
   };
@@ -100,7 +116,7 @@ export default function SetupScreen() {
           </Text>
         </View>
 
-        {step !== "error" ? (
+        {step !== "error" && step !== "profile" && (
           <>
             <ActivityIndicator color="#F5C518" size="large" />
             <Text className="font-dm text-base text-qban-white mt-6 text-center">
@@ -110,7 +126,18 @@ export default function SetupScreen() {
               This only takes a moment
             </Text>
           </>
-        ) : (
+        )}
+
+        {step === "profile" && !showProfileSetup && (
+          <>
+            <ActivityIndicator color="#F5C518" size="large" />
+            <Text className="font-dm text-base text-qban-white mt-6 text-center">
+              Setting up your profile...
+            </Text>
+          </>
+        )}
+
+        {step === "error" && (
           <>
             <Text className="font-dm text-base text-qban-red text-center">
               {error}
@@ -128,6 +155,18 @@ export default function SetupScreen() {
           </>
         )}
       </View>
+
+      <ProfileSetupSheet
+        visible={showProfileSetup}
+        onDismiss={() => {
+          setShowProfileSetup(false);
+          router.replace("/(tabs)");
+        }}
+        onSaved={() => {
+          setShowProfileSetup(false);
+          router.replace("/(tabs)");
+        }}
+      />
     </SafeAreaView>
   );
 }

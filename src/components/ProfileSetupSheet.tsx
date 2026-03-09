@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../providers/AuthProvider";
 import { saveProfile, isValidUsername, setProfilePromptShown } from "../services/profileStorage";
+import { generateFunnyName } from "../utils/funnyNames";
 
 interface ProfileSetupSheetProps {
   visible: boolean;
@@ -91,10 +92,19 @@ export default function ProfileSetupSheet({ visible, onDismiss, onSaved }: Profi
   }, [walletAddress, username, bio, pfpUri, onSaved]);
 
   const handleSkip = useCallback(async () => {
+    if (walletAddress) {
+      // Auto-create profile with a funny name
+      const funnyName = generateFunnyName(walletAddress);
+      try {
+        await saveProfile({ address: walletAddress, username: funnyName });
+      } catch {
+        // Profile may already exist, that's fine
+      }
+    }
     await setProfilePromptShown();
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onDismiss();
-  }, [onDismiss]);
+  }, [walletAddress, onDismiss]);
 
   if (!visible) return null;
 
@@ -112,7 +122,7 @@ export default function ProfileSetupSheet({ visible, onDismiss, onSaved }: Profi
           Set Up Your Profile
         </Text>
         <Text className="font-dm text-sm text-qban-smoke mb-6">
-          Nice trade! Let others see who&apos;s behind the moves.
+          Pick a name so others know who&apos;s behind the moves.
         </Text>
 
         {/* PFP Picker */}
