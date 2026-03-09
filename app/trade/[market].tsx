@@ -23,7 +23,7 @@ import {
   setProfilePromptShown,
 } from "../../src/services/profileStorage";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
-import { useUsdcBalance } from "../../src/hooks/useUsdcBalance";
+import { useMarginBalance } from "../../src/hooks/useMarginBalance";
 import {
   DEFAULT_LEVERAGE,
   LEVERAGE_PRESETS,
@@ -49,7 +49,7 @@ export default function TradeScreen() {
 
   // ─── Auth & Balance ────────────────────────────────────────
   const { walletAddress } = useAuth();
-  const { balance } = useUsdcBalance(walletAddress);
+  const { marginUsd: balance } = useMarginBalance();
 
   // ─── Price ──────────────────────────────────────────────────
   const { price: pythPrice } = usePythPrice();
