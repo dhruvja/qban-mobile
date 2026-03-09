@@ -34,33 +34,45 @@ export default function LoginScreen() {
     try {
       await sendCode({ email });
       setStep("email_otp");
-    } catch {
-      // error handled by Privy state
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to send code",
+        text2: err instanceof Error ? err.message : "Please try again.",
+        visibilityTime: 3000,
+      });
     }
   };
 
   const handleEmailVerify = async () => {
     try {
       await loginWithCode({ code: otp });
-      // AuthGate in _layout.tsx handles redirect to (tabs)
-    } catch {
-      // error handled by Privy state
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Invalid code",
+        text2: "Please check and try again.",
+        visibilityTime: 3000,
+      });
     }
   };
 
   const handleOAuth = async (provider: "google" | "apple") => {
     try {
       await loginWithOAuth({ provider });
-      // AuthGate in _layout.tsx handles redirect to (tabs)
-    } catch {
-      // error handled by Privy state
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Sign in failed",
+        text2: err instanceof Error ? err.message : "Please try again.",
+        visibilityTime: 3000,
+      });
     }
   };
 
   const handleConnectWallet = async () => {
     try {
       await connectMWA();
-      // AuthGate in _layout.tsx handles redirect
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to connect wallet";
@@ -125,6 +137,21 @@ export default function LoginScreen() {
                 <View className="flex-1 h-px bg-qban-charcoal" />
               </View>
 
+              {/* Google Sign In */}
+              <Pressable
+                className="bg-qban-charcoal border border-qban-tan/20 rounded-xl py-4 items-center active:opacity-80"
+                onPress={() => handleOAuth("google")}
+                disabled={isLoading}
+              >
+                {oauthState.status === "loading" ? (
+                  <ActivityIndicator color="#F5C518" size="small" />
+                ) : (
+                  <Text className="font-dm-bold text-base text-qban-white">
+                    Continue with Google
+                  </Text>
+                )}
+              </Pressable>
+
               {/* Apple Sign In */}
               {Platform.OS === "ios" && (
                 <Pressable
@@ -138,17 +165,6 @@ export default function LoginScreen() {
                 </Pressable>
               )}
 
-              {/* Google Sign In */}
-              <Pressable
-                className="bg-qban-charcoal border border-qban-tan/20 rounded-xl py-4 items-center active:opacity-80"
-                onPress={() => handleOAuth("google")}
-                disabled={isLoading}
-              >
-                <Text className="font-dm-bold text-base text-qban-white">
-                  Continue with Google
-                </Text>
-              </Pressable>
-
               {/* Email */}
               <Pressable
                 className="bg-qban-charcoal border border-qban-tan/20 rounded-xl py-4 items-center active:opacity-80"
@@ -159,14 +175,6 @@ export default function LoginScreen() {
                   Continue with Email
                 </Text>
               </Pressable>
-
-              {isLoading && !mwaConnecting && (
-                <ActivityIndicator
-                  color="#F5C518"
-                  size="small"
-                  className="mt-4"
-                />
-              )}
             </View>
           )}
 
@@ -195,7 +203,7 @@ export default function LoginScreen() {
                 onPress={handleEmailSend}
                 disabled={!email.includes("@") || isLoading}
               >
-                {isLoading ? (
+                {emailState.status === "sending-code" ? (
                   <ActivityIndicator color="#1A1A1A" size="small" />
                 ) : (
                   <Text
@@ -244,7 +252,7 @@ export default function LoginScreen() {
                 onPress={handleEmailVerify}
                 disabled={otp.length !== 6 || isLoading}
               >
-                {isLoading ? (
+                {emailState.status === "submitting-code" ? (
                   <ActivityIndicator color="#1A1A1A" size="small" />
                 ) : (
                   <Text
