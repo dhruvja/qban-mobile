@@ -423,9 +423,16 @@ export default function PortfolioScreen() {
                           </Text>
                         </View>
                         <View>
-                          <Text className="font-dm text-sm text-qban-white">
-                            SOL {fill.isBid ? "UP" : "DOWN"}
-                          </Text>
+                          <View className="flex-row items-center gap-1.5">
+                            <Text className="font-dm-bold text-sm text-qban-white">
+                              SOL
+                            </Text>
+                            <View className={`rounded px-1.5 py-0.5 ${fill.isBid ? "bg-qban-green/15" : "bg-qban-red/15"}`}>
+                              <Text className={`font-space text-[10px] font-bold ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
+                                {fill.isBid ? "UP" : "DOWN"}
+                              </Text>
+                            </View>
+                          </View>
                           <Text className="font-dm text-xs text-qban-smoke-dark">
                             {fillSizeSol.toFixed(3)} SOL @{" "}
                             {formatUsd(fill.price)}
