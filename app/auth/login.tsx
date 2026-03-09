@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLoginWithEmail, useLoginWithOAuth } from "@privy-io/expo";
+import { usePrivy, useLoginWithEmail, useLoginWithOAuth } from "@privy-io/expo";
 import Toast from "react-native-toast-message";
 import { useUnifiedWallet } from "../../src/providers/UnifiedWalletProvider";
 
@@ -20,6 +20,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
 
+  const { logout, user } = usePrivy();
   const { sendCode, loginWithCode, state: emailState } = useLoginWithEmail();
   const { login: loginWithOAuth, state: oauthState } = useLoginWithOAuth();
   const { connectMWA, connecting: mwaConnecting } = useUnifiedWallet();
@@ -32,6 +33,10 @@ export default function LoginScreen() {
 
   const handleEmailSend = async () => {
     try {
+      // Clear any stale Privy session before starting email login
+      if (user) {
+        await logout();
+      }
       await sendCode({ email });
       setStep("email_otp");
     } catch (err) {
