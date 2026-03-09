@@ -13,7 +13,7 @@ import { useAuth } from "../../src/providers/AuthProvider";
 import { fetchAllTraderFills } from "../../src/api/client";
 import { getFollowedTraders } from "../../src/services/followStorage";
 import { apiPriceToUsd, baseAtomsToSol } from "../../src/constants";
-import type { LeaderboardPeriod, LeaderboardTrader } from "../../src/types";
+import type { LeaderboardPeriod } from "../../src/types";
 
 function formatUsd(v: number): string {
   if (Math.abs(v) >= 1000)
@@ -24,6 +24,26 @@ function formatUsd(v: number): string {
 /** Generate a deterministic @username from a wallet address */
 function traderUsername(addr: string): string {
   return `@${addr.slice(0, 4).toLowerCase()}${addr.slice(-4).toLowerCase()}`;
+}
+
+interface FeedActivity {
+  id: string;
+  trader: string;
+  side: "buy" | "sell";
+  price: number;
+  size: number;
+  timestamp: number;
+}
+
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 type Tab = "top" | "friends" | "feed";
@@ -146,6 +166,21 @@ export default function LeaderboardScreen() {
     const followSet = new Set(followedAddresses);
     return traders.filter((t) => followSet.has(t.trader));
   }, [traders, followedAddresses]);
+
+  const feedItems = useMemo<FeedActivity[]>(() => {
+    return allFills
+      .filter((f) => f.block_time)
+      .map((fill, index) => ({
+        id: fill.id ?? fill.signature ?? String(index),
+        trader: fill.taker ?? fill.maker ?? "unknown",
+        side: fill.taker_is_buy ? ("buy" as const) : ("sell" as const),
+        price: apiPriceToUsd(fill.price),
+        size: baseAtomsToSol(fill.base_atoms),
+        timestamp: new Date(fill.block_time).getTime(),
+      }))
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 100);
+  }, [allFills]);
 
   const myRank = useMemo(() => {
     if (!walletAddress) return null;
@@ -353,11 +388,59 @@ export default function LeaderboardScreen() {
       )}
 
       {tab === "feed" && (
-        <View className="flex-1 items-center justify-center">
-          <Text className="font-dm text-sm text-qban-smoke-dark">
-            Trade activity will appear here
-          </Text>
-        </View>
+        <FlatList
+          data={feedItems}
+          keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#F5C518"
+            />
+          }
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 80, flexGrow: 1 }}
+          renderItem={({ item }) => (
+            <Pressable
+              className="py-3.5 border-b border-qban-charcoal active:opacity-80"
+              onPress={() => router.push(`/trader/${item.trader}` as never)}
+            >
+              <View className="flex-row items-center justify-between mb-1.5">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-8 h-8 rounded-full bg-qban-charcoal items-center justify-center">
+                    <Text className="font-dm-bold text-xs text-qban-smoke">
+                      {item.trader.slice(0, 2).toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text className="font-dm text-sm text-qban-yellow">
+                    {traderUsername(item.trader)}
+                  </Text>
+                </View>
+                <Text className="font-space text-xs text-qban-smoke-dark">
+                  {timeAgo(item.timestamp)}
+                </Text>
+              </View>
+              <View className="ml-10">
+                <Text className="font-dm text-sm text-qban-white">
+                  {item.side === "buy" ? "Bought" : "Sold"}{" "}
+                  <Text className={item.side === "buy" ? "text-qban-green" : "text-qban-red"}>
+                    {item.size.toFixed(3)} SOL
+                  </Text>
+                  {" "}at ${item.price.toFixed(2)}
+                </Text>
+                <Text className="font-space text-xs text-qban-smoke-dark mt-0.5">
+                  ${(item.size * item.price).toFixed(2)} notional
+                </Text>
+              </View>
+            </Pressable>
+          )}
+          ListEmptyComponent={
+            <View className="flex-1 items-center justify-center">
+              <Text className="font-dm text-sm text-qban-smoke-dark">
+                Nothing happening yet. Be the first to trade!
+              </Text>
+            </View>
+          }
+        />
       )}
 
       {/* Sticky Your Rank footer */}
