@@ -11,6 +11,7 @@ import { router } from "expo-router";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { fetchAllTraderFills } from "../../src/api/client";
+import { getFollowedTraders } from "../../src/services/followStorage";
 import { apiPriceToUsd, baseAtomsToSol } from "../../src/constants";
 import type { LeaderboardPeriod, LeaderboardTrader } from "../../src/types";
 
@@ -53,6 +54,8 @@ export default function LeaderboardScreen() {
   const { price: currentPrice } = usePythPrice();
   const { walletAddress } = useAuth();
 
+  const [followedAddresses, setFollowedAddresses] = useState<string[]>([]);
+
   const loadFills = useCallback(async () => {
     try {
       const fills = await fetchAllTraderFills("SOL/USD");
@@ -62,9 +65,22 @@ export default function LeaderboardScreen() {
     }
   }, []);
 
+  const loadFollows = useCallback(async () => {
+    const follows = await getFollowedTraders();
+    setFollowedAddresses(follows);
+  }, []);
+
   useEffect(() => {
     loadFills();
-  }, [loadFills]);
+    loadFollows();
+  }, [loadFills, loadFollows]);
+
+  // Reload follows when switching to Friends tab
+  useEffect(() => {
+    if (tab === "friends") {
+      loadFollows();
+    }
+  }, [tab, loadFollows]);
 
   // Compute leaderboard from fills, applying time filter
   const traders = useMemo(() => {
@@ -125,6 +141,12 @@ export default function LeaderboardScreen() {
       .map((t, i) => ({ ...t, rank: i + 1 }));
   }, [allFills, currentPrice, period]);
 
+  const friendTraders = useMemo(() => {
+    if (followedAddresses.length === 0) return [];
+    const followSet = new Set(followedAddresses);
+    return traders.filter((t) => followSet.has(t.trader));
+  }, [traders, followedAddresses]);
+
   const myRank = useMemo(() => {
     if (!walletAddress) return null;
     return traders.find((t) => t.trader === walletAddress) ?? null;
@@ -132,9 +154,9 @@ export default function LeaderboardScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadFills();
+    await Promise.all([loadFills(), loadFollows()]);
     setRefreshing(false);
-  }, [loadFills]);
+  }, [loadFills, loadFollows]);
 
   const shortAddr = (addr: string) =>
     `${addr.slice(0, 4)}...${addr.slice(-4)}`;
@@ -268,11 +290,66 @@ export default function LeaderboardScreen() {
       )}
 
       {tab === "friends" && (
-        <View className="flex-1 items-center justify-center">
-          <Text className="font-dm text-sm text-qban-smoke-dark">
-            Follow traders to see them here
-          </Text>
-        </View>
+        <FlatList
+          data={friendTraders}
+          keyExtractor={(item) => item.trader}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#F5C518"
+            />
+          }
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 80, flexGrow: 1 }}
+          renderItem={({ item }) => (
+            <Pressable
+              className="flex-row items-center py-3.5 border-b border-qban-charcoal active:opacity-80"
+              onPress={() => router.push(`/trader/${item.trader}` as never)}
+            >
+              <View className="w-8 items-center">
+                <Text
+                  className={`font-space text-sm ${
+                    item.rank <= 3 ? "text-qban-yellow" : "text-qban-smoke-dark"
+                  }`}
+                >
+                  #{item.rank}
+                </Text>
+              </View>
+              <View className="flex-1 ml-3">
+                <View className="flex-row items-center gap-2">
+                  <View className="w-8 h-8 rounded-full bg-qban-charcoal items-center justify-center">
+                    <Text className="font-dm-bold text-xs text-qban-smoke">
+                      {item.trader.slice(0, 2).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View>
+                    <Text className="font-dm text-sm text-qban-yellow">
+                      {traderUsername(item.trader)}
+                    </Text>
+                    <Text className="font-space text-xs text-qban-smoke-dark">
+                      {item.trades} trades · Vol {formatUsd(item.volume)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+              <Text
+                className={`font-space text-sm ${
+                  item.pnl >= 0 ? "text-qban-green" : "text-qban-red"
+                }`}
+              >
+                {item.pnl >= 0 ? "+" : ""}
+                {formatUsd(item.pnl)}
+              </Text>
+            </Pressable>
+          )}
+          ListEmptyComponent={
+            <View className="flex-1 items-center justify-center">
+              <Text className="font-dm text-sm text-qban-smoke-dark">
+                Follow traders to see them here
+              </Text>
+            </View>
+          }
+        />
       )}
 
       {tab === "feed" && (

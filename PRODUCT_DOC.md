@@ -969,7 +969,7 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | 8.3 | Time filter | All Time / Week / Month toggle | Done |
 | 8.4 | Your rank footer | Sticky bottom bar showing your rank | Done |
 | 8.5 | Trader profile page | Tap card → full profile with stats + recent activity | Done |
-| 8.6 | Friends tab | List of traders you follow + their rankings | Placeholder — shows empty message only |
+| 8.6 | Friends tab | List of traders you follow + their rankings | Done |
 | 8.7 | Feed tab | Live activity stream of all public trades | Placeholder — shows empty message only |
 | 8.8 | Feed reactions | Emoji reactions on feed items (eyes, fire) | Not Started |
 
