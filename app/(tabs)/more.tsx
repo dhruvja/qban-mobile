@@ -208,14 +208,6 @@ export default function MoreScreen() {
                 Volume
               </Text>
             </View>
-            <View className="items-center flex-1">
-              <Text className={`font-space text-lg ${pnlColor(profile)}`}>
-                {formatPnl(profile)}
-              </Text>
-              <Text className="font-dm text-xs text-qban-smoke-dark">
-                PnL
-              </Text>
-            </View>
           </View>
         </View>
 
