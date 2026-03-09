@@ -417,9 +417,11 @@ export default function PortfolioScreen() {
                       className="flex-row items-center justify-between py-2.5 border-b border-qban-charcoal"
                     >
                       <View className="flex-row items-center gap-2">
-                        <Text className={`text-sm ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
-                          {fill.isBid ? "\u25B2" : "\u25BC"}
-                        </Text>
+                        <View className={`w-7 h-7 rounded-full items-center justify-center ${fill.isBid ? "bg-qban-green/15" : "bg-qban-red/15"}`}>
+                          <Text className={`font-space text-xs font-bold ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
+                            {fill.isBid ? "\u2191" : "\u2193"}
+                          </Text>
+                        </View>
                         <View>
                           <Text className="font-dm text-sm text-qban-white">
                             SOL {fill.isBid ? "UP" : "DOWN"}
