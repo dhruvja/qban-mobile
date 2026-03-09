@@ -226,7 +226,8 @@ export async function createProfile(params: {
     const text = await response.text();
     throw new Error(`Create profile failed: ${response.status} ${text}`);
   }
-  return response.json();
+  const data = await response.json();
+  return data.profile ?? data;
 }
 
 export async function updateProfile(
@@ -247,13 +248,15 @@ export async function updateProfile(
     const text = await response.text();
     throw new Error(`Update profile failed: ${response.status} ${text}`);
   }
-  return response.json();
+  const data = await response.json();
+  return data.profile ?? data;
 }
 
 export async function fetchProfile(
   address: string
 ): Promise<ApiUserProfile> {
-  return fetchApi<ApiUserProfile>(`/users/${address}`);
+  const data = await fetchApi<{ profile: ApiUserProfile }>(`/users/${address}`);
+  return data.profile;
 }
 
 // ─── FOLLOW SYSTEM ──────────────────────────────────────────────────
