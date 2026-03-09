@@ -228,10 +228,17 @@ async function waitForAccountOnDevnet(
 }
 
 type SignTransactionFn = (tx: Transaction) => Promise<Transaction>;
+type SendTransactionFn = (
+  tx: Transaction | import("@solana/web3.js").VersionedTransaction,
+  connection: Connection
+) => Promise<string>;
 
 /**
  * Full deposit flow: deposit USDC into platform margin.
  * Handles ephemeral ATA init, delegation, and margin deposit.
+ *
+ * Uses sendTransaction for devnet txs (wallet signs+sends to correct cluster)
+ * and signTransaction for MagicBlock txs (we send to MagicBlock RPC ourselves).
  */
 export async function depositFlow({
   publicKey,
@@ -239,12 +246,14 @@ export async function depositFlow({
   magicblockConnection,
   amount,
   signTransaction,
+  sendTransaction,
 }: {
   publicKey: PublicKey;
   devnetConnection: Connection;
   magicblockConnection: Connection;
   amount: number;
   signTransaction: SignTransactionFn;
+  sendTransaction: SendTransactionFn;
 }): Promise<{ step: string; signature: string }[]> {
   const results: { step: string; signature: string }[] = [];
 
@@ -263,6 +272,7 @@ export async function depositFlow({
     undelegateTx.recentBlockhash = mbBlockhash.blockhash;
     undelegateTx.feePayer = publicKey;
 
+    // MagicBlock tx — sign only, we send to MagicBlock RPC
     const signed = await signTransaction(undelegateTx);
     const undelegateSig = await magicblockConnection.sendRawTransaction(
       signed.serialize(),
@@ -289,11 +299,8 @@ export async function depositFlow({
   depositTx.recentBlockhash = devnetBlockhash.blockhash;
   depositTx.feePayer = publicKey;
 
-  const signedDeposit = await signTransaction(depositTx);
-  const depositSig = await devnetConnection.sendRawTransaction(
-    signedDeposit.serialize(),
-    { skipPreflight: true }
-  );
+  // Devnet tx — wallet signs + sends to devnet cluster
+  const depositSig = await sendTransaction(depositTx, devnetConnection);
   await devnetConnection.confirmTransaction(
     { signature: depositSig, ...devnetBlockhash },
     "confirmed"
@@ -320,6 +327,7 @@ export async function depositFlow({
   marginTx.recentBlockhash = mbBlockhash.blockhash;
   marginTx.feePayer = publicKey;
 
+  // MagicBlock tx — sign only, we send to MagicBlock RPC
   const signedMarginTx = await signTransaction(marginTx);
   const manifestSig = await magicblockConnection.sendRawTransaction(
     signedMarginTx.serialize(),
