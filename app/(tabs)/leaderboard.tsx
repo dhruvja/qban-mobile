@@ -167,10 +167,16 @@ export default function LeaderboardScreen() {
     ({ item, index }: { item: LeaderboardEntry; index: number }) => {
       const volume = parseFloat(item.volume_quote || "0") / 1e6;
       const pnl = item.realized_pnl / 1e6;
+      const isMe = walletAddress === item.address;
       return (
         <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
           <Pressable
-            className="flex-row items-center py-3.5 border-b border-qban-charcoal active:opacity-80"
+            className={`flex-row items-center py-3.5 border-b active:opacity-80 ${
+              isMe
+                ? "bg-qban-yellow/8 border-b-qban-yellow/20"
+                : "border-b-qban-charcoal"
+            }`}
+            style={isMe ? { marginHorizontal: -24, paddingHorizontal: 24 } : undefined}
             onPress={() => router.push(`/trader/${item.address}` as never)}
           >
             {/* Rank */}
@@ -220,7 +226,7 @@ export default function LeaderboardScreen() {
         </Animated.View>
       );
     },
-    []
+    [walletAddress]
   );
 
   const renderFeedItem = useCallback(
