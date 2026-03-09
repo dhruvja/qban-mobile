@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,15 @@ import {
   ScrollView,
   RefreshControl,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import AnimatedPressable from "../../src/components/AnimatedPressable";
 import { MARKETS } from "../../src/constants";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
@@ -34,6 +41,42 @@ function formatVolume(value: number): string {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
   return `$${value.toFixed(0)}`;
+}
+
+/** Price text with green/red flash on change */
+function PriceFlash({ price, className }: { price: number | null; className?: string }) {
+  const prevPrice = useRef(price);
+  const flashOpacity = useSharedValue(0);
+  const flashColor = useRef<"green" | "red">("green");
+
+  useEffect(() => {
+    if (price !== null && prevPrice.current !== null && price !== prevPrice.current) {
+      flashColor.current = price > prevPrice.current ? "green" : "red";
+      flashOpacity.value = withSequence(
+        withTiming(1, { duration: 100 }),
+        withTiming(0, { duration: 300 })
+      );
+    }
+    prevPrice.current = price;
+  }, [price]);
+
+  const flashStyle = useAnimatedStyle(() => ({
+    backgroundColor:
+      flashColor.current === "green"
+        ? `rgba(22, 199, 132, ${flashOpacity.value * 0.3})`
+        : `rgba(234, 57, 67, ${flashOpacity.value * 0.3})`,
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  }));
+
+  return (
+    <Animated.View style={flashStyle}>
+      <Text className={className ?? "font-space text-base text-qban-white"}>
+        {price ? formatUsd(price) : "—"}
+      </Text>
+    </Animated.View>
+  );
 }
 
 // Simple SVG-like sparkline using View elements
@@ -204,11 +247,12 @@ export default function HomeScreen() {
               const positive = change >= 0;
 
               return (
-                <Pressable
+                <AnimatedPressable
                   key={market.symbol}
                   className={`bg-qban-charcoal border border-qban-tan/10 rounded-2xl p-4 ${
-                    isLive ? "active:opacity-80" : "opacity-60"
+                    isLive ? "" : "opacity-60"
                   }`}
+                  scaleDown={isLive ? 0.97 : 1}
                   onPress={() => {
                     if (isLive) {
                       router.push(`/trade/${market.symbol}` as never);
@@ -235,9 +279,7 @@ export default function HomeScreen() {
                         </View>
                       )}
                     </View>
-                    <Text className="font-space text-base text-qban-white">
-                      {displayPrice ? formatUsd(displayPrice) : "—"}
-                    </Text>
+                    <PriceFlash price={displayPrice} />
                   </View>
 
                   {/* Row 2: Change + Volume */}
@@ -261,7 +303,7 @@ export default function HomeScreen() {
                   {isLive && sparklineData && (
                     <Sparkline data={sparklineData} positive={positive} />
                   )}
-                </Pressable>
+                </AnimatedPressable>
               );
             })}
           </View>

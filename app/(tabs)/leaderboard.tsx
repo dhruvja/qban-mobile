@@ -6,6 +6,7 @@ import {
   FlatList,
   RefreshControl,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
@@ -291,7 +292,8 @@ export default function LeaderboardScreen() {
               />
             }
             contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 80 }}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
+              <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
               <Pressable
                 className="flex-row items-center py-3.5 border-b border-qban-charcoal active:opacity-80"
                 onPress={() => router.push(`/trader/${item.trader}` as never)}
@@ -339,6 +341,7 @@ export default function LeaderboardScreen() {
                   {formatUsd(item.pnl)}
                 </Text>
               </Pressable>
+              </Animated.View>
             )}
             ListEmptyComponent={
               <View className="items-center py-12">
