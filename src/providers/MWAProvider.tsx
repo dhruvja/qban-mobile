@@ -11,9 +11,16 @@ import {
   transact,
   Web3MobileWallet,
 } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
+import { toByteArray } from "base64-js";
 
 const AUTH_TOKEN_KEY = "qban_mwa_auth_token";
 const WALLET_KEY = "qban_mwa_wallet_address";
+
+/** MWA returns addresses as base64 — convert to base58 via PublicKey */
+function toBase58Address(base64Address: string): string {
+  const bytes = toByteArray(base64Address);
+  return new PublicKey(bytes).toBase58();
+}
 
 const APP_IDENTITY = {
   name: "QBAN",
@@ -41,12 +48,13 @@ export function MWAProvider({ children }: { children: ReactNode }) {
         identity: APP_IDENTITY,
         chain: "solana:devnet",
       });
-      // Cache the auth token + address
+      const addr = toBase58Address(auth.accounts[0].address);
+      // Cache the auth token + base58 address
       await AsyncStorage.multiSet([
         [AUTH_TOKEN_KEY, auth.auth_token],
-        [WALLET_KEY, auth.accounts[0].address],
+        [WALLET_KEY, addr],
       ]);
-      return auth.accounts[0].address;
+      return addr;
     });
     return address;
   }, []);
@@ -79,7 +87,7 @@ export function MWAProvider({ children }: { children: ReactNode }) {
               auth_token: cachedToken,
               identity: APP_IDENTITY,
             });
-            address = reauth.accounts[0].address;
+            address = toBase58Address(reauth.accounts[0].address);
             await AsyncStorage.setItem(AUTH_TOKEN_KEY, reauth.auth_token);
           } catch {
             // Reauth failed — do full authorize
@@ -87,7 +95,7 @@ export function MWAProvider({ children }: { children: ReactNode }) {
               identity: APP_IDENTITY,
               chain: "solana:devnet",
             });
-            address = auth.accounts[0].address;
+            address = toBase58Address(auth.accounts[0].address);
             await AsyncStorage.multiSet([
               [AUTH_TOKEN_KEY, auth.auth_token],
               [WALLET_KEY, address],
@@ -98,7 +106,7 @@ export function MWAProvider({ children }: { children: ReactNode }) {
             identity: APP_IDENTITY,
             chain: "solana:devnet",
           });
-          address = auth.accounts[0].address;
+          address = toBase58Address(auth.accounts[0].address);
           await AsyncStorage.multiSet([
             [AUTH_TOKEN_KEY, auth.auth_token],
             [WALLET_KEY, address],
