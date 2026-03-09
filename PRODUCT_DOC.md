@@ -1033,9 +1033,9 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 14.1 | Trade haptics | Direction pick (medium), multiplier notch (light), submit (heavy), confirm (success) | Not Started |
-| 14.2 | Position haptics | Close confirm (heavy), long-press (medium) | Not Started |
-| 14.3 | Social haptics | Follow (light), copy referral (success), new follower (light) | Not Started |
+| 14.1 | Trade haptics | Direction pick (medium), multiplier notch (light), submit (heavy), confirm (success) | Done |
+| 14.2 | Position haptics | Close confirm (heavy), long-press (medium) | Done |
+| 14.3 | Social haptics | Follow (light), copy referral (success), new follower (light) | Done |
 | 14.4 | Pull-to-refresh haptic | Medium impact when refresh threshold is hit | Not Started |
 | 14.5 | Swipe-to-close position | Swipe left on position card reveals "Close" action (iOS mail-style) | Not Started |
 | 14.6 | Swipe between tabs | Pan gesture to swipe between Leaderboard sub-tabs | Not Started |

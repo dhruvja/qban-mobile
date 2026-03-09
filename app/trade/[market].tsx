@@ -11,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import Slider from "@react-native-community/slider";
+import * as Haptics from "expo-haptics";
 import Toast from "react-native-toast-message";
 import { Chart } from "../../src/components/Chart";
 import ProfileSetupSheet from "../../src/components/ProfileSetupSheet";
@@ -117,6 +118,7 @@ export default function TradeScreen() {
 
   const openConfirmSheet = useCallback(() => {
     sheetRef.current?.snapToIndex(0);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
   }, []);
 
   const closeConfirmSheet = useCallback(() => {
@@ -129,6 +131,7 @@ export default function TradeScreen() {
       // TODO: Build and send Anchor instruction via session key
       closeConfirmSheet();
       setAmountStr("");
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Toast.show({
         type: "success",
         text1: "Trade Submitted",
@@ -196,7 +199,10 @@ export default function TradeScreen() {
                   ? "bg-qban-green/15 border-qban-green"
                   : "bg-qban-charcoal border-qban-tan/10"
               }`}
-              onPress={() => setDirection("long")}
+              onPress={() => {
+                setDirection("long");
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }}
             >
               <Text
                 className={`font-dm-bold text-base ${
@@ -212,7 +218,10 @@ export default function TradeScreen() {
                   ? "bg-qban-red/15 border-qban-red"
                   : "bg-qban-charcoal border-qban-tan/10"
               }`}
-              onPress={() => setDirection("short")}
+              onPress={() => {
+                setDirection("short");
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }}
             >
               <Text
                 className={`font-dm-bold text-base ${
@@ -279,7 +288,10 @@ export default function TradeScreen() {
                     ? "bg-qban-yellow/15 border-qban-yellow"
                     : "bg-qban-charcoal border-qban-tan/10"
                 }`}
-                onPress={() => setLeverage(preset)}
+                onPress={() => {
+                  setLeverage(preset);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
               >
                 <Text
                   className={`font-space text-sm ${
@@ -299,7 +311,12 @@ export default function TradeScreen() {
             maximumValue={MAX_LEVERAGE_NEW_USER}
             step={1}
             value={leverage}
-            onValueChange={setLeverage}
+            onValueChange={(v: number) => {
+              if (v !== leverage) {
+                setLeverage(v);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }}
             minimumTrackTintColor="#F5C518"
             maximumTrackTintColor="#2D2D2D"
             thumbTintColor="#F5C518"
