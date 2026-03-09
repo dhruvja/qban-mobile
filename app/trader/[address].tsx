@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import { fetchTraderPositions, fetchTraderFills, fetchProfile, type ApiUserProfile } from "../../src/api/client";
 import { baseAtomsToSol } from "../../src/constants";
 import { getMarketPda } from "../../src/solana/market-instructions";
+import { SkeletonFillCard } from "../../src/components/Skeleton";
 import {
   isFollowing as checkFollowing,
   followTrader,
@@ -289,7 +290,12 @@ export default function TraderProfileScreen() {
             <View className="flex-1 h-px bg-qban-charcoal" />
           </View>
 
-          {groupedFills.length > 0 ? (
+          {fillsLoading ? (
+            <>
+              <SkeletonFillCard rows={3} />
+              <SkeletonFillCard rows={2} />
+            </>
+          ) : groupedFills.length > 0 ? (
             groupedFills.map((group) => (
               <View key={group.date} className="mb-6">
                 <Text className="font-dm-medium text-xs text-qban-smoke-dark mb-3 uppercase tracking-wider">

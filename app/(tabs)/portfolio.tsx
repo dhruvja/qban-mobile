@@ -24,6 +24,7 @@ import {
 } from "../../src/solana/market-instructions";
 import { CLOSE_PRESETS, baseAtomsToSol } from "../../src/constants";
 import { fetchTraderFills } from "../../src/api/client";
+import { SkeletonFillCard } from "../../src/components/Skeleton";
 
 const [MARKET_ADDRESS] = getMarketPda();
 const MARKET_STR = MARKET_ADDRESS.toBase58();
@@ -386,7 +387,12 @@ export default function PortfolioScreen() {
             <View className="flex-1 h-px bg-qban-charcoal" />
           </View>
 
-          {groupedFills.length > 0 ? (
+          {fillsLoading ? (
+            <>
+              <SkeletonFillCard rows={3} />
+              <SkeletonFillCard rows={2} />
+            </>
+          ) : groupedFills.length > 0 ? (
             groupedFills.map((group) => (
               <View key={group.date} className="mb-6">
                 <Text className="font-dm-medium text-xs text-qban-smoke-dark mb-3 uppercase tracking-wider">

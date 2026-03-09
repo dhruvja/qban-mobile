@@ -91,6 +91,38 @@ export function SkeletonMarketCard() {
   );
 }
 
+/** Trade history skeleton — mimics grouped-by-date fill cards */
+export function SkeletonFillCard({ rows = 3 }: { rows?: number }) {
+  return (
+    <View className="mb-6">
+      <Skeleton width={80} height={10} style={{ marginBottom: 12 }} />
+      <View className="bg-qban-charcoal/40 rounded-2xl overflow-hidden">
+        {[...Array(rows)].map((_, i) => (
+          <View
+            key={i}
+            className={`flex-row items-center px-4 py-4 ${
+              i < rows - 1 ? "border-b border-qban-charcoal/60" : ""
+            }`}
+          >
+            <Skeleton width={20} height={20} borderRadius={4} style={{ marginRight: 14 }} />
+            <View className="flex-1 gap-1.5">
+              <View className="flex-row items-center gap-2">
+                <Skeleton width={32} height={14} />
+                <Skeleton width={36} height={16} borderRadius={6} />
+              </View>
+              <Skeleton width={140} height={10} />
+            </View>
+            <View className="items-end gap-1.5">
+              <Skeleton width={55} height={14} />
+              <Skeleton width={40} height={10} />
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 /** Balance card skeleton */
 export function SkeletonBalance() {
   return (
