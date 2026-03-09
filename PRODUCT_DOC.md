@@ -1083,6 +1083,31 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | 17.4 | Auto-prompt | Show "Share your win?" after closing a profitable position | Not Started |
 | 17.5 | Save to camera roll | Option to save P&L card image locally | Not Started |
 
+### Phase 18: Solana Wallet Integration & Live Trading
+
+This phase replaces the placeholder tasks (5.10, 6.6, 7.3, 7.6) with real on-chain transactions. Uses logic from `perp-ui` and Solana Mobile Wallet Adapter.
+
+**Reference codebase**: `~/Documents/solana-stuff/perp-ui`
+
+| # | Task | Description | Status |
+|---|---|---|---|
+| 18.1 | Solana Mobile Wallet Adapter setup | Install `@solana-mobile/mobile-wallet-adapter-protocol-web3js`, polyfills (`buffer`, `react-native-get-random-values`), create `ConnectionProvider` + `AuthorizationProvider` | Not Started |
+| 18.2 | Sign-in screen | New auth screen with two options: (1) Connect wallet via Solana Mobile Wallet Adapter (Phantom/Solflare), (2) Sign in with Privy (email/social). Replace current Privy-only login | Not Started |
+| 18.3 | Unified wallet provider | Create `useUnifiedWallet()` hook that abstracts over MWA and Privy wallets — returns `{ publicKey, connected, signTransaction, sendTransaction }`. Port from `perp-ui/unified-wallet-provider.tsx` | Not Started |
+| 18.4 | Dual connection setup | Set up both `devnetConnection` (Solana devnet) and `magicblockConnection` (MagicBlock devnet) — port from `perp-ui/connection-context.tsx` | Not Started |
+| 18.5 | Token balance check | On login, fetch wallet USDC token balance (ATA of `5PcHLtca749zFDf9WA9RBo8QbbrtQBuHx9TSGKMiThCe`). Port logic from `perp-ui/deposit-button.tsx` | Not Started |
+| 18.6 | Platform balance check | Fetch on-chain margin balance via `getMarginBalance()` from MagicBlock. Port from `perp-ui/market-instructions.ts` | Not Started |
+| 18.7 | Auto-airdrop flow | If both platform and wallet balances are zero, airdrop 100 USDC using mint authority keypair. Port from `perp-ui/deposit-instructions.ts` (no user signature needed) | Not Started |
+| 18.8 | Deposit flow — 2-step | Port 2-step deposit from `perp-ui/deposit-instructions.ts`: Step 1 (devnet): init ephemeral ATA + deposit + delegate. Step 2 (MagicBlock): claim seat + deposit to margin. Show progress UI | Not Started |
+| 18.9 | Post-login routing | After sign-in: check platform balance → if exists, go to Home. If not, check wallet balance → if zero, airdrop → then run deposit flow → then go to Home | Not Started |
+| 18.10 | Home screen — live balance | Fetch and display real margin balance from on-chain data. Replace mock balance. Auto-refresh every 10s | Not Started |
+| 18.11 | Quick-trade button (bottom nav) | Add a play/bolt button in the center of the bottom tab bar. Tapping it enables 1-click trade mode (navigates to trade screen with 1-click enabled) | Not Started |
+| 18.12 | 1-click trade — open position | On trade screen, tapping Up/Down immediately submits a market order (IOC) via `buildBatchUpdate()`. Uses session key for signing. Show toast with status. Port order logic from `perp-ui/market-instructions.ts` | Not Started |
+| 18.13 | Positions screen | New screen showing all open positions fetched via `getAllPositions()` / `getMarginBalance()` from MagicBlock. Show direction, size, entry price, current price, P&L, liquidation price. Real-time updates via account subscription | Not Started |
+| 18.14 | Close position — tx | Wire up close position to send on-chain instruction via `buildBatchUpdate()` with reverse order. Port from `perp-ui` | Not Started |
+| 18.15 | Portfolio — live margin balance | Fetch real margin balance on portfolio screen. Show available margin, margin in use, total equity | Not Started |
+| 18.16 | Withdraw — tx | Build and send withdraw instruction to move funds from margin back to wallet. Port from `perp-ui` | Not Started |
+
 ---
 
 ## V1.1 Scope
