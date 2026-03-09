@@ -13,7 +13,14 @@ import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import Slider from "@react-native-community/slider";
 import Toast from "react-native-toast-message";
 import { Chart } from "../../src/components/Chart";
+import ProfileSetupSheet from "../../src/components/ProfileSetupSheet";
 import { useAuth } from "../../src/providers/AuthProvider";
+import {
+  hasCompletedProfile,
+  hasProfilePromptBeenShown,
+  setHasTraded,
+  setProfilePromptShown,
+} from "../../src/services/profileStorage";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
 import { useUsdcBalance } from "../../src/hooks/useUsdcBalance";
 import { fetchCandles, type BinanceCandle } from "../../src/api/binance";
@@ -83,6 +90,7 @@ export default function TradeScreen() {
   const [amountStr, setAmountStr] = useState("");
   const [leverage, setLeverage] = useState(DEFAULT_LEVERAGE);
   const [submitting, setSubmitting] = useState(false);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
 
   const amount = parseFloat(amountStr) || 0;
   const positionSize = amount * leverage;
@@ -127,6 +135,16 @@ export default function TradeScreen() {
         text2: `${direction === "long" ? "Long" : "Short"} ${formatUsd(positionSize)} at ${leverage}x`,
         visibilityTime: 3000,
       });
+
+      // After first trade, prompt profile setup if not already done
+      await setHasTraded();
+      const [profileDone, promptShown] = await Promise.all([
+        hasCompletedProfile(),
+        hasProfilePromptBeenShown(),
+      ]);
+      if (!profileDone && !promptShown) {
+        setTimeout(() => setShowProfileSetup(true), 1500);
+      }
     } catch {
       Toast.show({
         type: "error",
@@ -480,6 +498,23 @@ export default function TradeScreen() {
           </Pressable>
         </BottomSheetView>
       </BottomSheet>
+      <ProfileSetupSheet
+        visible={showProfileSetup}
+        onDismiss={() => {
+          setShowProfileSetup(false);
+          setProfilePromptShown();
+        }}
+        onSaved={() => {
+          setShowProfileSetup(false);
+          setProfilePromptShown();
+          Toast.show({
+            type: "success",
+            text1: "Profile Saved",
+            text2: "Your trader identity is live!",
+            visibilityTime: 2000,
+          });
+        }}
+      />
     </SafeAreaView>
   );
 }

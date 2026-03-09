@@ -1,10 +1,15 @@
-import { View, Text, Pressable, ScrollView, Alert, Linking, Share } from "react-native";
+import { View, Text, Pressable, ScrollView, Alert, Linking, Share, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
+import Toast from "react-native-toast-message";
 import { useAuth } from "../../src/providers/AuthProvider";
-import { useState } from "react";
+import { getProfile } from "../../src/services/profileStorage";
+import { setProfilePromptShown } from "../../src/services/profileStorage";
+import ProfileSetupSheet from "../../src/components/ProfileSetupSheet";
+import { useCallback, useEffect, useState } from "react";
+import type { UserProfile } from "../../src/types";
 
 function SettingsRow({
   label,
@@ -59,6 +64,17 @@ function generateReferralCode(walletAddress: string): string {
 export default function MoreScreen() {
   const { walletAddress, logout } = useAuth();
   const [referralCopied, setReferralCopied] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    const p = await getProfile();
+    setProfile(p);
+  }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const shortAddr = walletAddress
     ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
@@ -106,14 +122,42 @@ export default function MoreScreen() {
 
         {/* Profile Section */}
         <View className="items-center py-6">
-          <View className="w-16 h-16 rounded-full bg-qban-charcoal items-center justify-center mb-3">
-            <Text className="font-dm-bold text-xl text-qban-yellow">
-              {walletAddress?.slice(0, 2).toUpperCase() ?? "?"}
+          {profile?.pfp_url ? (
+            <Image
+              source={{ uri: profile.pfp_url }}
+              className="w-16 h-16 rounded-full mb-3"
+            />
+          ) : (
+            <View className="w-16 h-16 rounded-full bg-qban-charcoal items-center justify-center mb-3">
+              <Text className="font-dm-bold text-xl text-qban-yellow">
+                {walletAddress?.slice(0, 2).toUpperCase() ?? "?"}
+              </Text>
+            </View>
+          )}
+          {profile?.username ? (
+            <>
+              <Text className="font-dm-medium text-base text-qban-yellow">
+                @{profile.username}
+              </Text>
+              {profile.bio ? (
+                <Text className="font-dm text-sm text-qban-smoke mt-1">
+                  {profile.bio}
+                </Text>
+              ) : null}
+            </>
+          ) : (
+            <Text className="font-space text-base text-qban-white">
+              {shortAddr}
             </Text>
-          </View>
-          <Text className="font-space text-base text-qban-white">
-            {shortAddr}
-          </Text>
+          )}
+          <Pressable
+            className="mt-3 border border-qban-yellow/30 rounded-lg px-4 py-1.5"
+            onPress={() => setShowEditProfile(true)}
+          >
+            <Text className="font-dm-medium text-xs text-qban-yellow">
+              {profile?.username ? "Edit Profile" : "Set Up Profile"}
+            </Text>
+          </Pressable>
         </View>
 
         <View className="px-6">
@@ -190,6 +234,19 @@ export default function MoreScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      <ProfileSetupSheet
+        visible={showEditProfile}
+        onDismiss={() => setShowEditProfile(false)}
+        onSaved={() => {
+          setShowEditProfile(false);
+          loadProfile();
+          Toast.show({
+            type: "success",
+            text1: "Profile Updated",
+            visibilityTime: 2000,
+          });
+        }}
+      />
     </SafeAreaView>
   );
 }

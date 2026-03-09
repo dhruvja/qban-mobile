@@ -977,13 +977,13 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 
 | # | Task | Description | Status |
 |---|---|---|---|
-| 9.1 | Profile prompt | Bottom sheet after first trade — "Set up your profile" | Not Started |
-| 9.2 | Username input | @username field with uniqueness check | Not Started |
-| 9.3 | PFP picker | Camera / photo library + crop | Not Started |
+| 9.1 | Profile prompt | Bottom sheet after first trade — "Set up your profile" | Done |
+| 9.2 | Username input | @username field with uniqueness check | Done |
+| 9.3 | PFP picker | Camera / photo library + crop | Done |
 | 9.4 | Auto-generated avatar | Fallback avatar from wallet address for skippers | Done |
-| 9.5 | Bio field | Optional 60-char bio input | Not Started |
-| 9.6 | Profile API | Save/fetch profile to backend | Not Started |
-| 9.7 | Edit profile | Edit profile from More/Settings screen | Not Started |
+| 9.5 | Bio field | Optional 60-char bio input | Done |
+| 9.6 | Profile API | Save/fetch profile to backend | Done — local storage, backend API pending |
+| 9.7 | Edit profile | Edit profile from More/Settings screen | Done |
 
 ### Phase 10: Follow System
 
