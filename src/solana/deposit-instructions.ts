@@ -379,7 +379,7 @@ export async function airdropUsdc({
 }
 
 /**
- * Airdrop 0.01 SOL to the given wallet via devnet faucet.
+ * Send 0.01 SOL to the given wallet from the mint authority.
  */
 export async function airdropSol({
   publicKey,
@@ -388,9 +388,26 @@ export async function airdropSol({
   publicKey: PublicKey;
   devnetConnection: Connection;
 }): Promise<string> {
-  const sig = await devnetConnection.requestAirdrop(publicKey, SOL_AIRDROP_LAMPORTS);
-  console.log("[airdrop] SOL Tx:", sig);
+  const mintAuthority = Keypair.fromSecretKey(MINT_AUTHORITY_SECRET);
+
+  const tx = new Transaction().add(
+    SystemProgram.transfer({
+      fromPubkey: mintAuthority.publicKey,
+      toPubkey: publicKey,
+      lamports: SOL_AIRDROP_LAMPORTS,
+    })
+  );
+
   const blockhash = await devnetConnection.getLatestBlockhash();
+  tx.recentBlockhash = blockhash.blockhash;
+  tx.feePayer = mintAuthority.publicKey;
+  tx.sign(mintAuthority);
+
+  const sig = await devnetConnection.sendRawTransaction(tx.serialize(), {
+    skipPreflight: true,
+  });
+  console.log("[airdrop] SOL Tx:", sig);
+
   await devnetConnection.confirmTransaction(
     { signature: sig, ...blockhash },
     "confirmed"
