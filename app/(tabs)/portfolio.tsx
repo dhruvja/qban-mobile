@@ -123,10 +123,6 @@ export default function PortfolioScreen() {
   }, [hasPosition, currentPrice, entryPrice, side, positionSol]);
 
   // Balance
-  const inPositions = hasPosition && currentPrice
-    ? positionSol * currentPrice
-    : 0;
-  const totalBalance = marginUsd + inPositions;
 
   // ─── Group fills by date ────────────────────────────────────
   const groupedFills = useMemo(() => {
@@ -228,28 +224,12 @@ export default function PortfolioScreen() {
 
         {/* Balance Overview */}
         <View className="px-6 py-4">
-          <View className="flex-row justify-between mb-2">
-            <Text className="font-dm text-sm text-qban-smoke-dark">
-              Total Balance
-            </Text>
-            <Text className="font-space text-base text-qban-white">
-              {formatUsd(totalBalance)}
-            </Text>
-          </View>
-          <View className="flex-row justify-between mb-2">
-            <Text className="font-dm text-sm text-qban-smoke-dark">
-              Available Margin
-            </Text>
-            <Text className="font-space text-sm text-qban-smoke">
-              {formatUsd(marginUsd)}
-            </Text>
-          </View>
           <View className="flex-row justify-between">
             <Text className="font-dm text-sm text-qban-smoke-dark">
-              In Positions
+              Margin Balance
             </Text>
-            <Text className="font-space text-sm text-qban-smoke">
-              {formatUsd(Math.max(0, inPositions))}
+            <Text className="font-space text-base text-qban-white">
+              {formatUsd(marginUsd)}
             </Text>
           </View>
         </View>
