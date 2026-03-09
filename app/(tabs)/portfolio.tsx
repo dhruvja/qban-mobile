@@ -405,48 +405,59 @@ export default function PortfolioScreen() {
 
           {groupedFills.length > 0 ? (
             groupedFills.map((group) => (
-              <View key={group.date} className="mb-4">
-                <Text className="font-dm-medium text-xs text-qban-smoke-dark mb-2">
+              <View key={group.date} className="mb-6">
+                <Text className="font-dm-medium text-xs text-qban-smoke-dark mb-3 uppercase tracking-wider">
                   {group.date}
                 </Text>
-                {group.items.map((fill, index) => {
-                  const fillSizeSol = baseAtomsToSol(fill.baseAtoms);
-                  return (
-                    <View
-                      key={`${fill.orderId}-${index}`}
-                      className="flex-row items-center justify-between py-2.5 border-b border-qban-charcoal"
-                    >
-                      <View className="flex-row items-center gap-2">
-                        <Text className={`font-space text-base font-bold ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
+                <View className="bg-qban-charcoal/40 rounded-2xl overflow-hidden">
+                  {group.items.map((fill, index) => {
+                    const fillSizeSol = baseAtomsToSol(fill.baseAtoms);
+                    const notional = fillSizeSol * fill.price;
+                    const isLast = index === group.items.length - 1;
+                    return (
+                      <View
+                        key={`${fill.orderId}-${index}`}
+                        className={`flex-row items-center px-4 py-4 ${!isLast ? "border-b border-qban-charcoal/60" : ""}`}
+                      >
+                        {/* Arrow icon */}
+                        <Text className={`font-space text-lg font-bold mr-3.5 ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
                           {fill.isBid ? "\u2191" : "\u2193"}
                         </Text>
-                        <View>
-                          <View className="flex-row items-center gap-1.5">
-                            <Text className="font-dm-bold text-sm text-qban-white">
+
+                        {/* Left: label + details */}
+                        <View className="flex-1">
+                          <View className="flex-row items-center gap-2 mb-1">
+                            <Text className="font-dm-bold text-base text-qban-white">
                               SOL
                             </Text>
-                            <View className={`rounded px-1.5 py-0.5 ${fill.isBid ? "bg-qban-green/15" : "bg-qban-red/15"}`}>
-                              <Text className={`font-space text-[10px] font-bold ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
+                            <View className={`rounded-md px-2 py-0.5 ${fill.isBid ? "bg-qban-green/12" : "bg-qban-red/12"}`}>
+                              <Text className={`font-space text-[10px] font-bold tracking-wide ${fill.isBid ? "text-qban-green" : "text-qban-red"}`}>
                                 {fill.isBid ? "UP" : "DOWN"}
                               </Text>
                             </View>
                           </View>
-                          <Text className="font-dm text-xs text-qban-smoke-dark">
-                            {fillSizeSol.toFixed(3)} SOL @{" "}
-                            {formatUsd(fill.price)}
+                          <Text className="font-space text-xs text-qban-smoke-dark">
+                            {fillSizeSol.toFixed(4)} SOL @ {formatUsd(fill.price)}
+                          </Text>
+                        </View>
+
+                        {/* Right: notional + time */}
+                        <View className="items-end">
+                          <Text className="font-space text-sm text-qban-white mb-0.5">
+                            {formatUsd(notional)}
+                          </Text>
+                          <Text className="font-space text-[10px] text-qban-smoke-dark">
+                            {formatTime(fill.blockTime)}
                           </Text>
                         </View>
                       </View>
-                      <Text className="font-dm text-xs text-qban-smoke-dark">
-                        {formatTime(fill.blockTime)}
-                      </Text>
-                    </View>
-                  );
-                })}
+                    );
+                  })}
+                </View>
               </View>
             ))
           ) : (
-            <View className="items-center py-8">
+            <View className="items-center py-12">
               <Text className="font-dm text-sm text-qban-smoke-dark">
                 Your trade history will appear here after your first trade.
               </Text>
