@@ -1052,10 +1052,10 @@ Update the **Status** column after completing each step. Use: `Not Started` → 
 | 15.3 | Trade chart skeleton | Skeleton with faint grid lines until WebView renders | Not Started |
 | 15.4 | Portfolio skeletons | Skeleton position card + history rows | Done |
 | 15.5 | Leaderboard skeletons | Skeleton cards with circle (pfp) + text rectangles | Done |
-| 15.6 | Empty — no positions | Illustration + "Ready to make your first trade?" + CTA | Not Started |
-| 15.7 | Empty — no history | "Your trade history will appear here." | Not Started |
-| 15.8 | Empty — no friends | "Follow traders to see them here." + CTA | Not Started |
-| 15.9 | Empty — no referrals | "Share your code and earn when friends trade." + CTA | Not Started |
+| 15.6 | Empty — no positions | Illustration + "Ready to make your first trade?" + CTA | Done |
+| 15.7 | Empty — no history | "Your trade history will appear here." | Done |
+| 15.8 | Empty — no friends | "Follow traders to see them here." + CTA | Done |
+| 15.9 | Empty — no referrals | "Share your code and earn when friends trade." + CTA | Done |
 | 15.10 | Error — offline banner | Persistent top banner: "You're offline" — show stale cached data | Not Started |
 | 15.11 | Error — trade failed | Toast: "Trade didn't go through. Try again." + Retry | Not Started |
 | 15.12 | Error — price stale | "(delayed)" label next to price when feed drops | Not Started |

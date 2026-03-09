@@ -418,9 +418,20 @@ export default function LeaderboardScreen() {
           )}
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center">
-              <Text className="font-dm text-sm text-qban-smoke-dark">
+              <Text className="font-dm text-base text-qban-smoke mb-2">
+                No friends yet
+              </Text>
+              <Text className="font-dm text-sm text-qban-smoke-dark mb-4 text-center">
                 Follow traders to see them here
               </Text>
+              <Pressable
+                className="bg-qban-yellow rounded-xl px-6 py-3 active:opacity-80"
+                onPress={() => setTab("top")}
+              >
+                <Text className="font-dm-bold text-sm text-qban-black">
+                  Explore Traders
+                </Text>
+              </Pressable>
             </View>
           }
         />

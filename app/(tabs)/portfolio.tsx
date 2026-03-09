@@ -9,6 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
@@ -327,10 +328,21 @@ export default function PortfolioScreen() {
               </View>
             </View>
           ) : (
-            <View className="items-center py-8">
-              <Text className="font-dm text-sm text-qban-smoke-dark">
-                No active positions
+            <View className="items-center py-12">
+              <Text className="font-dm text-base text-qban-smoke mb-2">
+                No positions yet
               </Text>
+              <Text className="font-dm text-sm text-qban-smoke-dark mb-4 text-center">
+                Ready to make your first trade?
+              </Text>
+              <Pressable
+                className="bg-qban-yellow rounded-xl px-6 py-3 active:opacity-80"
+                onPress={() => router.push("/trade/SOL/USD" as never)}
+              >
+                <Text className="font-dm-bold text-sm text-qban-black">
+                  Trade Now
+                </Text>
+              </Pressable>
             </View>
           )}
         </View>
@@ -390,7 +402,7 @@ export default function PortfolioScreen() {
           ) : (
             <View className="items-center py-8">
               <Text className="font-dm text-sm text-qban-smoke-dark">
-                No trade history yet
+                Your trade history will appear here after your first trade.
               </Text>
             </View>
           )}
