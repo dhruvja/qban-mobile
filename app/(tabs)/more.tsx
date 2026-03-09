@@ -60,6 +60,34 @@ function generateReferralCode(walletAddress: string): string {
   return `QBAN-${prefix}${num.toString().padStart(4, "0")}`;
 }
 
+function getAllTimeStats(profile: ApiUserProfile | null) {
+  if (!profile?.stats?.length) return null;
+  return profile.stats.find((s) => s.period === "all_time") ?? profile.stats[0];
+}
+
+function formatVolume(profile: ApiUserProfile | null): string {
+  const stats = getAllTimeStats(profile);
+  if (!stats) return "$0";
+  const vol = parseFloat(stats.volume_quote || "0") / 1e6;
+  if (vol >= 1000) return `$${(vol / 1000).toFixed(1)}K`;
+  return `$${vol.toFixed(0)}`;
+}
+
+function formatPnl(profile: ApiUserProfile | null): string {
+  const stats = getAllTimeStats(profile);
+  if (!stats) return "$0";
+  const pnl = (stats.realized_pnl || 0) / 1e6;
+  const prefix = pnl >= 0 ? "+" : "";
+  if (Math.abs(pnl) >= 1000) return `${prefix}$${(pnl / 1000).toFixed(1)}K`;
+  return `${prefix}$${pnl.toFixed(2)}`;
+}
+
+function pnlColor(profile: ApiUserProfile | null): string {
+  const stats = getAllTimeStats(profile);
+  if (!stats) return "text-qban-smoke-dark";
+  return (stats.realized_pnl || 0) >= 0 ? "text-qban-green" : "text-qban-red";
+}
+
 export default function MoreScreen() {
   const { walletAddress, logout } = useAuth();
   const [referralCopied, setReferralCopied] = useState(false);
@@ -153,6 +181,42 @@ export default function MoreScreen() {
               {profile?.username ? "Edit Profile" : "Set Up Profile"}
             </Text>
           </Pressable>
+
+          {/* Stats */}
+          <View className="flex-row mt-5 gap-4">
+            <View className="items-center flex-1">
+              <Text className="font-space text-lg text-qban-white">
+                {profile?.follower_count ?? 0}
+              </Text>
+              <Text className="font-dm text-xs text-qban-smoke-dark">
+                Followers
+              </Text>
+            </View>
+            <View className="items-center flex-1">
+              <Text className="font-space text-lg text-qban-white">
+                {profile?.following_count ?? 0}
+              </Text>
+              <Text className="font-dm text-xs text-qban-smoke-dark">
+                Following
+              </Text>
+            </View>
+            <View className="items-center flex-1">
+              <Text className="font-space text-lg text-qban-white">
+                {formatVolume(profile)}
+              </Text>
+              <Text className="font-dm text-xs text-qban-smoke-dark">
+                Volume
+              </Text>
+            </View>
+            <View className="items-center flex-1">
+              <Text className={`font-space text-lg ${pnlColor(profile)}`}>
+                {formatPnl(profile)}
+              </Text>
+              <Text className="font-dm text-xs text-qban-smoke-dark">
+                PnL
+              </Text>
+            </View>
+          </View>
         </View>
 
         <View className="px-6">
@@ -162,10 +226,12 @@ export default function MoreScreen() {
             label="Deposit"
             onPress={() => router.push("/deposit" as never)}
           />
-          <SettingsRow
-            label="Withdraw"
+          <Pressable
+            className="flex-row items-center justify-between py-3.5 active:opacity-80"
             onPress={() => router.push("/withdraw" as never)}
-          />
+          >
+            <Text className="font-dm text-base text-qban-white">Withdraw</Text>
+          </Pressable>
 
           {/* Refer & Earn */}
           <SectionHeader title="Refer & Earn" />

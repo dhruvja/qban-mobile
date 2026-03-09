@@ -199,6 +199,7 @@ export interface ApiUserProfile {
   follower_count: number;
   following_count: number;
   stats: Array<{
+    period: string;
     volume_quote: string;
     num_trades: number;
     realized_pnl: number;

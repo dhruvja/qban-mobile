@@ -192,12 +192,12 @@ export default function LeaderboardScreen() {
       return (
         <Animated.View entering={FadeInDown.delay(index * 50).duration(300)}>
           <Pressable
-            className={`flex-row items-center py-3.5 border-b active:opacity-80 ${
+            className={`flex-row items-center py-3.5 active:opacity-80 ${
               isMe
-                ? "bg-qban-yellow/8 border-b-qban-yellow/20"
-                : "border-b-qban-charcoal"
+                ? "bg-qban-yellow/10 border border-qban-yellow/25 rounded-xl my-1"
+                : "border-b border-b-qban-charcoal"
             }`}
-            style={isMe ? { marginHorizontal: -24, paddingHorizontal: 24 } : undefined}
+            style={isMe ? { marginHorizontal: -8, paddingHorizontal: 8 } : undefined}
             onPress={() => router.push(`/trader/${item.address}` as never)}
           >
             {/* Rank */}
