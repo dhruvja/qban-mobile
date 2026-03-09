@@ -58,7 +58,7 @@ export default function TradeScreen() {
   // ─── Auth & Balance ────────────────────────────────────────
   const { walletAddress } = useAuth();
   const { marginUsd: balance, refresh: refreshBalance } = useMarginBalance();
-  const { signTransaction } = useUnifiedWallet();
+  const { sendTransaction } = useUnifiedWallet();
   const { magicblockConnection } = useConnections();
 
   // ─── Price ──────────────────────────────────────────────────
@@ -144,11 +144,7 @@ export default function TradeScreen() {
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
-      const signed = await signTransaction(tx);
-      const sig = await magicblockConnection.sendRawTransaction(
-        signed.serialize(),
-        { skipPreflight: true }
-      );
+      const sig = await sendTransaction(tx, magicblockConnection);
       console.log(`[trade] ${direction} market order tx:`, sig);
 
       closeConfirmSheet();
@@ -185,7 +181,7 @@ export default function TradeScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [walletAddress, direction, positionSize, currentPrice, leverage, closeConfirmSheet, signTransaction, magicblockConnection, refreshBalance]);
+  }, [walletAddress, direction, positionSize, currentPrice, leverage, closeConfirmSheet, sendTransaction, magicblockConnection, refreshBalance]);
 
   return (
     <SafeAreaView className="flex-1 bg-qban-black" edges={["top"]}>
