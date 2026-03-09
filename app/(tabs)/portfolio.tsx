@@ -11,12 +11,18 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import { PublicKey, Transaction, ComputeBudgetProgram } from "@solana/web3.js";
 import { useAuth } from "../../src/providers/AuthProvider";
+import { useUnifiedWallet } from "../../src/providers/UnifiedWalletProvider";
+import { useConnections } from "../../src/providers/ConnectionProvider";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
-import { useUsdcBalance } from "../../src/hooks/useUsdcBalance";
-import { fetchTraderPositions, fetchTraderOrders } from "../../src/api/client";
-import { apiPriceToUsd, baseAtomsToSol, CLOSE_PRESETS } from "../../src/constants";
-import type { UserOrder } from "../../src/types";
+import { useMarginBalance } from "../../src/hooks/useMarginBalance";
+import {
+  buildBatchUpdate,
+  getMarketPda,
+  OrderType,
+} from "../../src/solana/market-instructions";
+import { CLOSE_PRESETS } from "../../src/constants";
 
 function formatUsd(v: number): string {
   return v.toLocaleString("en-US", {
@@ -27,116 +33,48 @@ function formatUsd(v: number): string {
   });
 }
 
-function formatTime(timestamp: string | undefined): string {
-  if (!timestamp) return "";
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(timestamp: string | undefined): string {
-  if (!timestamp) return "";
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffDays = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-interface PositionData {
-  market: string;
-  side: "long" | "short";
-  sizeBase: number;
-  sizeSol: number;
-  entryPrice: number;
-  leverage: number;
-}
-
 export default function PortfolioScreen() {
   const { walletAddress } = useAuth();
   const { price: currentPrice } = usePythPrice();
-  const { balance: usdcBalance, refetch: refetchBalance } = useUsdcBalance(walletAddress);
+  const { position, marginUsd, refresh: refreshBalance } = useMarginBalance();
+  const { sendTransaction } = useUnifiedWallet();
+  const { magicblockConnection } = useConnections();
 
-  const [position, setPosition] = useState<PositionData | null>(null);
-  const [orders, setOrders] = useState<UserOrder[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [closingPct, setClosingPct] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const loadData = useCallback(async () => {
-    if (!walletAddress) return;
-    try {
-      const [positions, traderOrders] = await Promise.all([
-        fetchTraderPositions(walletAddress),
-        fetchTraderOrders(walletAddress, 50),
-      ]);
+  const hasPosition = position && position.direction !== "FLAT";
+  const positionSol = position ? Math.abs(position.positionBase) : 0;
+  const side = position?.direction === "LONG" ? "long" : "short";
 
-      // Find active position (non-flat)
-      const active = positions.find(
-        (p) => p.side !== "flat" && p.net_base_atoms !== 0
-      );
-      if (active) {
-        setPosition({
-          market: active.market,
-          side: active.side as "long" | "short",
-          sizeBase: Math.abs(active.net_base_atoms),
-          sizeSol: baseAtomsToSol(Math.abs(active.net_base_atoms)),
-          entryPrice: active.entry_price
-            ? apiPriceToUsd(active.entry_price)
-            : 0,
-          leverage: active.effective_leverage || 1,
-        });
-      } else {
-        setPosition(null);
-      }
-
-      setOrders(traderOrders);
-    } catch {
-      // Silently fail — will show empty state
-    }
-  }, [walletAddress]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // Cost basis → entry price estimate
+  const entryPrice = useMemo(() => {
+    if (!position || positionSol === 0) return 0;
+    return Number(position.costBasisAtoms) / 1e6 / positionSol;
+  }, [position, positionSol]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([loadData(), refetchBalance()]);
+    await refreshBalance();
     setRefreshing(false);
-  }, [loadData]);
+  }, [refreshBalance]);
 
   // P&L calculation
   const pnl = useMemo(() => {
-    if (!position || !currentPrice || !position.entryPrice) return null;
-    const diff = currentPrice - position.entryPrice;
-    const direction = position.side === "long" ? 1 : -1;
-    const pnlUsd =
-      diff * direction * position.sizeSol * position.leverage;
-    const pnlPct =
-      ((diff * direction) / position.entryPrice) * 100 * position.leverage;
+    if (!hasPosition || !currentPrice || !entryPrice) return null;
+    const diff = currentPrice - entryPrice;
+    const direction = side === "long" ? 1 : -1;
+    const pnlUsd = diff * direction * positionSol;
+    const pnlPct = ((diff * direction) / entryPrice) * 100;
     return { usd: pnlUsd, pct: pnlPct };
-  }, [position, currentPrice]);
+  }, [hasPosition, currentPrice, entryPrice, side, positionSol]);
 
-  const liquidationPrice = useMemo(() => {
-    if (!position || !position.entryPrice || position.leverage <= 0) return 0;
-    const liqMove = position.entryPrice / position.leverage;
-    return position.side === "long"
-      ? position.entryPrice - liqMove
-      : position.entryPrice + liqMove;
-  }, [position]);
-
-  // Balance from on-chain USDC
-  const inPositions = position
-    ? position.sizeSol * (position.entryPrice || 0)
+  // Balance
+  const inPositions = hasPosition && currentPrice
+    ? positionSol * currentPrice
     : 0;
-  const totalBalance = usdcBalance + inPositions;
-  const available = usdcBalance;
+  const totalBalance = marginUsd + inPositions;
 
   // ─── Close Position Bottom Sheet ────────────────────────────
   const sheetRef = useRef<BottomSheet>(null);
@@ -148,35 +86,56 @@ export default function PortfolioScreen() {
   }, []);
 
   const handleClose = useCallback(async () => {
+    if (!walletAddress || !hasPosition || !currentPrice || !closingPct) return;
     setSubmitting(true);
     try {
-      // TODO: Build and send close instruction
-      Alert.alert("Position Closed", `Closed ${(closingPct ?? 0) * 100}% of your position`);
+      const publicKey = new PublicKey(walletAddress);
+      const [market] = getMarketPda();
+
+      // Close = opposite direction order
+      const isBid = side === "short"; // close short = buy, close long = sell
+      const closeSize = positionSol * closingPct;
+      const baseAtoms = Math.floor(closeSize * 1e9);
+
+      const priceWithBuffer = isBid
+        ? currentPrice * 1.005
+        : currentPrice * 0.995;
+      const priceMantissa = Math.round(priceWithBuffer * 100);
+
+      const batchIx = buildBatchUpdate(publicKey, market, {
+        traderIndexHint: null,
+        cancels: [],
+        orders: [{
+          baseAtoms,
+          priceMantissa,
+          priceExponent: -5,
+          isBid,
+          lastValidSlot: 0,
+          orderType: OrderType.ImmediateOrCancel,
+        }],
+      });
+
+      const tx = new Transaction();
+      tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
+      tx.add(batchIx);
+
+      const { blockhash } = await magicblockConnection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = publicKey;
+
+      const sig = await sendTransaction(tx, magicblockConnection);
+      console.log(`[close] ${closingPct * 100}% close tx:`, sig);
+
       sheetRef.current?.close();
       setClosingPct(null);
-      await loadData();
-    } catch {
-      Alert.alert("Close Failed", "Please try again.");
+      await refreshBalance();
+    } catch (err) {
+      console.error("[close] error:", err);
+      Alert.alert("Close Failed", err instanceof Error ? err.message : "Please try again.");
     } finally {
       setSubmitting(false);
     }
-  }, [closingPct, loadData]);
-
-  // ─── Group orders by date ──────────────────────────────────
-  const groupedOrders = useMemo(() => {
-    const groups: { date: string; items: UserOrder[] }[] = [];
-    let currentGroup: { date: string; items: UserOrder[] } | null = null;
-
-    for (const order of orders) {
-      const dateStr = formatDate(order.block_time);
-      if (!currentGroup || currentGroup.date !== dateStr) {
-        currentGroup = { date: dateStr, items: [] };
-        groups.push(currentGroup);
-      }
-      currentGroup.items.push(order);
-    }
-    return groups;
-  }, [orders]);
+  }, [walletAddress, hasPosition, currentPrice, closingPct, side, positionSol, sendTransaction, magicblockConnection, refreshBalance]);
 
   return (
     <SafeAreaView className="flex-1 bg-qban-black" edges={["top"]}>
@@ -211,10 +170,10 @@ export default function PortfolioScreen() {
           </View>
           <View className="flex-row justify-between mb-2">
             <Text className="font-dm text-sm text-qban-smoke-dark">
-              Available
+              Available Margin
             </Text>
             <Text className="font-space text-sm text-qban-smoke">
-              {formatUsd(Math.max(0, available))}
+              {formatUsd(marginUsd)}
             </Text>
           </View>
           <View className="flex-row justify-between">
@@ -237,29 +196,29 @@ export default function PortfolioScreen() {
             <View className="flex-1 h-px bg-qban-charcoal" />
           </View>
 
-          {position ? (
+          {hasPosition ? (
             <View className="bg-qban-charcoal border border-qban-tan/10 rounded-2xl p-4">
               {/* Header */}
               <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-row items-center gap-2">
                   <Text className="font-dm-bold text-base text-qban-white">
-                    {position.market || "SOL/USD"}
+                    SOL/USD
                   </Text>
                   <View
                     className={`rounded-full px-2 py-0.5 ${
-                      position.side === "long"
+                      side === "long"
                         ? "bg-qban-green/15"
                         : "bg-qban-red/15"
                     }`}
                   >
                     <Text
                       className={`font-space text-xs ${
-                        position.side === "long"
+                        side === "long"
                           ? "text-qban-green"
                           : "text-qban-red"
                       }`}
                     >
-                      {position.side === "long" ? "UP" : "DOWN"}
+                      {side === "long" ? "LONG" : "SHORT"}
                     </Text>
                   </View>
                 </View>
@@ -283,7 +242,7 @@ export default function PortfolioScreen() {
                     Size
                   </Text>
                   <Text className="font-space text-sm text-qban-white">
-                    {position.sizeSol.toFixed(3)} SOL ({position.leverage}x)
+                    {positionSol.toFixed(4)} SOL
                   </Text>
                 </View>
                 <View className="flex-row justify-between">
@@ -291,7 +250,7 @@ export default function PortfolioScreen() {
                     Entry
                   </Text>
                   <Text className="font-space text-sm text-qban-white">
-                    {formatUsd(position.entryPrice)}
+                    {entryPrice > 0 ? formatUsd(entryPrice) : "—"}
                   </Text>
                 </View>
                 <View className="flex-row justify-between">
@@ -304,10 +263,10 @@ export default function PortfolioScreen() {
                 </View>
                 <View className="flex-row justify-between">
                   <Text className="font-dm text-sm text-qban-smoke-dark">
-                    Liquidation
+                    Margin
                   </Text>
-                  <Text className="font-space text-sm text-qban-red">
-                    {formatUsd(liquidationPrice)}
+                  <Text className="font-space text-sm text-qban-white">
+                    {formatUsd(marginUsd)}
                   </Text>
                 </View>
               </View>
@@ -347,65 +306,26 @@ export default function PortfolioScreen() {
           )}
         </View>
 
-        {/* Trade History */}
+        {/* Deposit/Withdraw */}
         <View className="px-6 mt-4">
-          <View className="flex-row items-center my-3">
-            <View className="flex-1 h-px bg-qban-charcoal" />
-            <Text className="font-space text-xs text-qban-smoke-dark mx-4 uppercase tracking-widest">
-              History
-            </Text>
-            <View className="flex-1 h-px bg-qban-charcoal" />
-          </View>
-
-          {groupedOrders.length > 0 ? (
-            groupedOrders.map((group) => (
-              <View key={group.date} className="mb-4">
-                <Text className="font-dm-medium text-xs text-qban-smoke-dark mb-2">
-                  {group.date}
-                </Text>
-                {group.items.map((order) => {
-                  const totalFillPrice =
-                    order.fills.length > 0
-                      ? order.fills.reduce((sum, f) => sum + f.price, 0) /
-                        order.fills.length
-                      : 0;
-                  const fillSizeSol = baseAtomsToSol(order.filled_base_atoms);
-                  const isWin = order.is_bid; // simplified — real P&L needs entry/exit comparison
-
-                  return (
-                    <View
-                      key={order.id}
-                      className="flex-row items-center justify-between py-2.5 border-b border-qban-charcoal"
-                    >
-                      <View className="flex-row items-center gap-2">
-                        <Text className="text-sm">
-                          {isWin ? "\u2705" : "\u274C"}
-                        </Text>
-                        <View>
-                          <Text className="font-dm text-sm text-qban-white">
-                            SOL {order.is_bid ? "UP" : "DOWN"}
-                          </Text>
-                          <Text className="font-dm text-xs text-qban-smoke-dark">
-                            {fillSizeSol.toFixed(3)} SOL @{" "}
-                            {formatUsd(totalFillPrice)}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text className="font-dm text-xs text-qban-smoke-dark">
-                        {formatTime(order.block_time)}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            ))
-          ) : (
-            <View className="items-center py-8">
-              <Text className="font-dm text-sm text-qban-smoke-dark">
-                Your trade history will appear here after your first trade.
+          <View className="flex-row gap-3">
+            <Pressable
+              className="flex-1 bg-qban-yellow rounded-xl py-3 items-center active:bg-qban-yellow-light"
+              onPress={() => router.push("/deposit" as never)}
+            >
+              <Text className="font-dm-bold text-sm text-qban-black">
+                Deposit
               </Text>
-            </View>
-          )}
+            </Pressable>
+            <Pressable
+              className="flex-1 bg-qban-charcoal border border-qban-tan/20 rounded-xl py-3 items-center active:opacity-80"
+              onPress={() => router.push("/withdraw" as never)}
+            >
+              <Text className="font-dm-bold text-sm text-qban-white">
+                Withdraw
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
 
@@ -423,7 +343,7 @@ export default function PortfolioScreen() {
             Close Position
           </Text>
 
-          {closingPct && position && (
+          {closingPct && hasPosition && (
             <View className="gap-3 mb-8">
               <Text className="font-dm text-sm text-qban-smoke text-center mb-2">
                 Closing {closingPct * 100}% of your position
@@ -436,9 +356,9 @@ export default function PortfolioScreen() {
                 <Text className="font-space text-sm text-qban-white">
                   ~
                   {formatUsd(
-                    position.sizeSol *
+                    positionSol *
                       closingPct *
-                      (currentPrice ?? position.entryPrice)
+                      (currentPrice ?? entryPrice)
                   )}
                 </Text>
               </View>
@@ -467,12 +387,7 @@ export default function PortfolioScreen() {
                     Remaining
                   </Text>
                   <Text className="font-space text-sm text-qban-white">
-                    {formatUsd(
-                      position.sizeSol *
-                        (1 - closingPct) *
-                        position.entryPrice
-                    )}{" "}
-                    ({position.leverage}x)
+                    {(positionSol * (1 - closingPct)).toFixed(4)} SOL
                   </Text>
                 </View>
               )}
