@@ -124,6 +124,14 @@ export function UnifiedWalletProvider({ children }: { children: ReactNode }) {
     setWalletType(null);
   }, [walletType, mwaDisconnect, privyLogout]);
 
+  // ─── Privy wallet helper ────────────────────────────────────
+  const getPrivyProvider = useCallback(async () => {
+    if (solanaWallet.status !== "connected" || solanaWallet.wallets.length === 0) {
+      throw new Error("Privy Solana wallet not connected");
+    }
+    return solanaWallet.wallets[0].getProvider();
+  }, [solanaWallet]);
+
   // ─── Sign Transaction (sign only, no send) ─────────────────
   const signTransaction = useCallback(
     async (transaction: Transaction): Promise<Transaction> => {
@@ -135,11 +143,16 @@ export function UnifiedWalletProvider({ children }: { children: ReactNode }) {
           return signed[0];
         });
       } else if (walletType === "privy") {
-        throw new Error("Privy signTransaction not yet implemented");
+        const provider = await getPrivyProvider();
+        const { signedTransaction } = await provider.request({
+          method: "signTransaction",
+          params: { transaction },
+        });
+        return signedTransaction;
       }
       throw new Error("No wallet connected");
     },
-    [walletType, withWallet]
+    [walletType, withWallet, getPrivyProvider]
   );
 
   // ─── Send Transaction ───────────────────────────────────────
@@ -158,14 +171,16 @@ export function UnifiedWalletProvider({ children }: { children: ReactNode }) {
           return sig;
         });
       } else if (walletType === "privy") {
-        // Privy embedded wallet handles signing internally
-        throw new Error(
-          "Privy sendTransaction not yet implemented for mobile — use Privy SDK methods directly"
-        );
+        const provider = await getPrivyProvider();
+        const { signature } = await provider.request({
+          method: "signAndSendTransaction",
+          params: { transaction, connection },
+        });
+        return signature;
       }
       throw new Error("No wallet connected");
     },
-    [walletType, withWallet]
+    [walletType, withWallet, getPrivyProvider]
   );
 
   // ─── Derived state ─────────────────────────────────────────
