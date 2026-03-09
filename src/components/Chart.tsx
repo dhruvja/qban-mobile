@@ -1,10 +1,11 @@
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, useMemo } from "react";
 import { View } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import type { CandleData } from "../types";
+import { LIGHTWEIGHT_CHARTS_JS } from "./chartLib";
 
-const CHART_HTML = `
-<!DOCTYPE html>
+function buildChartHtml(): string {
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
@@ -16,76 +17,66 @@ const CHART_HTML = `
 </head>
 <body>
   <div id="chart"></div>
-  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+  <script>${LIGHTWEIGHT_CHARTS_JS}</script>
   <script>
-    const chart = LightweightCharts.createChart(document.getElementById('chart'), {
-      layout: {
-        background: { color: '#1A1A1A' },
-        textColor: '#B8B2AA',
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: '#2D2D2D' },
-        horzLines: { color: '#2D2D2D' },
-      },
-      crosshair: {
-        mode: LightweightCharts.CrosshairMode.Normal,
-        vertLine: { color: '#F5C518', labelBackgroundColor: '#F5C518' },
-        horzLine: { color: '#F5C518', labelBackgroundColor: '#F5C518' },
-      },
-      rightPriceScale: {
-        borderColor: '#2D2D2D',
-      },
-      timeScale: {
-        borderColor: '#2D2D2D',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      handleScroll: { vertTouchDrag: false },
-    });
+    try {
+      var chart = LightweightCharts.createChart(document.getElementById('chart'), {
+        layout: {
+          background: { color: '#1A1A1A' },
+          textColor: '#B8B2AA',
+          fontSize: 11,
+        },
+        grid: {
+          vertLines: { color: '#2D2D2D' },
+          horzLines: { color: '#2D2D2D' },
+        },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal,
+          vertLine: { color: '#F5C518', labelBackgroundColor: '#F5C518' },
+          horzLine: { color: '#F5C518', labelBackgroundColor: '#F5C518' },
+        },
+        rightPriceScale: { borderColor: '#2D2D2D' },
+        timeScale: {
+          borderColor: '#2D2D2D',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        handleScroll: { vertTouchDrag: false },
+      });
 
-    const candleSeries = chart.addCandlestickSeries({
-      upColor: '#00C853',
-      downColor: '#CC2936',
-      borderUpColor: '#00C853',
-      borderDownColor: '#CC2936',
-      wickUpColor: '#00C853',
-      wickDownColor: '#CC2936',
-    });
+      var candleSeries = chart.addCandlestickSeries({
+        upColor: '#00C853',
+        downColor: '#CC2936',
+        borderUpColor: '#00C853',
+        borderDownColor: '#CC2936',
+        wickUpColor: '#00C853',
+        wickDownColor: '#CC2936',
+      });
 
-    chart.timeScale().fitContent();
+      chart.timeScale().fitContent();
 
-    window.addEventListener('message', function(event) {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'candles') {
-          candleSeries.setData(msg.data);
-          chart.timeScale().fitContent();
-        } else if (msg.type === 'update') {
-          candleSeries.update(msg.data);
-        }
-      } catch(e) {}
-    });
+      window.setCandles = function(data) {
+        candleSeries.setData(data);
+        chart.timeScale().fitContent();
+      };
 
-    // Also handle React Native postMessage
-    document.addEventListener('message', function(event) {
-      try {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'candles') {
-          candleSeries.setData(msg.data);
-          chart.timeScale().fitContent();
-        } else if (msg.type === 'update') {
-          candleSeries.update(msg.data);
-        }
-      } catch(e) {}
-    });
+      window.updateCandle = function(data) {
+        candleSeries.update(data);
+      };
 
-    new ResizeObserver(() => chart.applyOptions({ width: document.body.clientWidth }))
-      .observe(document.body);
+      new ResizeObserver(function() {
+        chart.applyOptions({ width: document.body.clientWidth });
+      }).observe(document.body);
+
+      window.ReactNativeWebView.postMessage('ready');
+    } catch(e) {
+      document.body.innerHTML = '<p style="color:#CC2936;padding:20px;font-family:monospace">Chart error: ' + e.message + '</p>';
+      window.ReactNativeWebView.postMessage('error:' + e.message);
+    }
   </script>
 </body>
-</html>
-`;
+</html>`;
+}
 
 interface ChartProps {
   candles: CandleData[];
@@ -93,70 +84,81 @@ interface ChartProps {
   height?: number;
 }
 
+function formatCandlesForChart(candles: CandleData[]) {
+  return candles.map((c) => ({
+    time: Math.floor(c.time / 1000),
+    open: c.open,
+    high: c.high,
+    low: c.low,
+    close: c.close,
+  }));
+}
+
 export function Chart({ candles, liveCandle, height = 280 }: ChartProps) {
   const webViewRef = useRef<WebView>(null);
-  const webViewReady = useRef(false);
+  const isReady = useRef(false);
+  const candlesRef = useRef(candles);
+  candlesRef.current = candles;
 
-  const sendMessage = useCallback((msg: object) => {
-    webViewRef.current?.postMessage(JSON.stringify(msg));
+  const html = useMemo(() => buildChartHtml(), []);
+
+  const inject = useCallback((js: string) => {
+    webViewRef.current?.injectJavaScript(js + ";true;");
   }, []);
 
-  const sendCandles = useCallback(() => {
-    if (!webViewReady.current || candles.length === 0) return;
-    sendMessage({
-      type: "candles",
-      data: candles.map((c) => ({
-        time: Math.floor(c.time / 1000),
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      })),
-    });
-  }, [candles, sendMessage]);
+  const sendCandlesToChart = useCallback(
+    (data: CandleData[]) => {
+      const json = JSON.stringify(formatCandlesForChart(data));
+      inject(`window.setCandles(${json})`);
+    },
+    [inject]
+  );
 
-  // WebView finished loading — send candles if we have them
-  const onLoad = useCallback(() => {
-    webViewReady.current = true;
-    sendCandles();
-  }, [sendCandles]);
+  // WebView signals ready — send candles if available
+  const onMessage = useCallback(
+    (event: WebViewMessageEvent) => {
+      if (event.nativeEvent.data === "ready") {
+        isReady.current = true;
+        if (candlesRef.current.length > 0) {
+          sendCandlesToChart(candlesRef.current);
+        }
+      }
+    },
+    [sendCandlesToChart]
+  );
 
-  // Candles changed — send if WebView is ready
+  // When candles prop changes after WebView is already ready
   useEffect(() => {
-    sendCandles();
-  }, [sendCandles]);
+    if (isReady.current && candles.length > 0) {
+      sendCandlesToChart(candles);
+    }
+  }, [candles, sendCandlesToChart]);
 
   // Stream live candle updates
   useEffect(() => {
-    if (liveCandle && sentInitial.current) {
-      sendMessage({
-        type: "update",
-        data: {
-          time: Math.floor(liveCandle.time / 1000),
-          open: liveCandle.open,
-          high: liveCandle.high,
-          low: liveCandle.low,
-          close: liveCandle.close,
-        },
+    if (isReady.current && liveCandle) {
+      const data = JSON.stringify({
+        time: Math.floor(liveCandle.time / 1000),
+        open: liveCandle.open,
+        high: liveCandle.high,
+        low: liveCandle.low,
+        close: liveCandle.close,
       });
+      inject(`window.updateCandle(${data})`);
     }
-  }, [liveCandle, sendMessage]);
-
-  const onMessage = useCallback((_event: WebViewMessageEvent) => {
-    // Future: handle chart interactions (crosshair, etc.)
-  }, []);
+  }, [liveCandle, inject]);
 
   return (
     <View style={{ height }} className="bg-qban-black rounded-xl overflow-hidden">
       <WebView
         ref={webViewRef}
-        source={{ html: CHART_HTML }}
-        onLoad={onLoad}
+        source={{ html }}
         onMessage={onMessage}
         scrollEnabled={false}
         bounces={false}
         javaScriptEnabled
         domStorageEnabled
+        originWhitelist={["*"]}
         style={{ backgroundColor: "#1A1A1A" }}
       />
     </View>

@@ -61,17 +61,21 @@ export default function TradeScreen() {
   const [candles, setCandles] = useState<CandleData[]>([]);
 
   useEffect(() => {
-    fetchCandles(baseToken, "1m", 200).then((data) => {
-      setCandles(
-        data.map((c: BinanceCandle) => ({
-          time: c.time,
-          open: c.open,
-          high: c.high,
-          low: c.low,
-          close: c.close,
-        }))
-      );
-    });
+    fetchCandles(baseToken, "1m", 200)
+      .then((data) => {
+        setCandles(
+          data.map((c: BinanceCandle) => ({
+            time: c.time,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+          }))
+        );
+      })
+      .catch((err) => {
+        console.error("[Trade] Failed to fetch candles:", err);
+      });
   }, [baseToken]);
 
   // Build live candle from Pyth price
