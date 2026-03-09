@@ -40,9 +40,14 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   }
 
   // Disable package exports for packages that are incompatible
+  // MWA: force React Native entry (index.native.js) instead of browser entry
   if (
     moduleName === "isows" ||
-    moduleName.startsWith("isows/")
+    moduleName.startsWith("isows/") ||
+    moduleName === "@solana-mobile/mobile-wallet-adapter-protocol" ||
+    moduleName.startsWith("@solana-mobile/mobile-wallet-adapter-protocol/") ||
+    moduleName === "@solana-mobile/mobile-wallet-adapter-protocol-web3js" ||
+    moduleName.startsWith("@solana-mobile/mobile-wallet-adapter-protocol-web3js/")
   ) {
     return context.resolveRequest(
       { ...context, unstable_enablePackageExports: false },
