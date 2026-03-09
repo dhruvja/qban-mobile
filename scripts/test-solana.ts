@@ -9,6 +9,8 @@ import {
   getMarketVault,
   buildClaimSeat,
   buildMarketDeposit,
+  buildBatchUpdate,
+  OrderType,
   hasSeat,
   getMarginBalance,
 } from "../src/solana/market-instructions";
@@ -83,6 +85,22 @@ async function runTests() {
   assert("buildMarketDeposit has correct programId", depositIx.programId.equals(MANIFEST_PROGRAM_ID));
   assert("buildMarketDeposit has 6 keys", depositIx.keys.length === 6);
   assert("buildMarketDeposit data starts with [2]", depositIx.data[0] === 2);
+
+  const batchIx = buildBatchUpdate(TEST_WALLET, marketPda, {
+    traderIndexHint: null,
+    cancels: [],
+    orders: [{
+      baseAtoms: 1_000_000_000, // 1 SOL
+      priceMantissa: 15000,
+      priceExponent: -5,
+      isBid: true,
+      lastValidSlot: 0,
+      orderType: OrderType.ImmediateOrCancel,
+    }],
+  });
+  assert("buildBatchUpdate has correct programId", batchIx.programId.equals(MANIFEST_PROGRAM_ID));
+  assert("buildBatchUpdate has 3 keys", batchIx.keys.length === 3);
+  assert("buildBatchUpdate data starts with [6]", batchIx.data[0] === 6);
 
   // ─── 3. On-chain Reads (needs network) ──────────────────────
   console.log("\n═══ On-chain Reads (MagicBlock) ═══");

@@ -15,7 +15,10 @@ import * as Haptics from "expo-haptics";
 import Toast from "react-native-toast-message";
 import { Chart } from "../../src/components/Chart";
 import ProfileSetupSheet from "../../src/components/ProfileSetupSheet";
+import { PublicKey, Transaction, ComputeBudgetProgram } from "@solana/web3.js";
 import { useAuth } from "../../src/providers/AuthProvider";
+import { useUnifiedWallet } from "../../src/providers/UnifiedWalletProvider";
+import { useConnections } from "../../src/providers/ConnectionProvider";
 import {
   hasCompletedProfile,
   hasProfilePromptBeenShown,
@@ -24,6 +27,11 @@ import {
 } from "../../src/services/profileStorage";
 import { usePythPrice } from "../../src/hooks/usePythPrice";
 import { useMarginBalance } from "../../src/hooks/useMarginBalance";
+import {
+  buildBatchUpdate,
+  getMarketPda,
+  OrderType,
+} from "../../src/solana/market-instructions";
 import {
   DEFAULT_LEVERAGE,
   LEVERAGE_PRESETS,
@@ -49,7 +57,9 @@ export default function TradeScreen() {
 
   // ─── Auth & Balance ────────────────────────────────────────
   const { walletAddress } = useAuth();
-  const { marginUsd: balance } = useMarginBalance();
+  const { marginUsd: balance, refresh: refreshBalance } = useMarginBalance();
+  const { signTransaction } = useUnifiedWallet();
+  const { magicblockConnection } = useConnections();
 
   // ─── Price ──────────────────────────────────────────────────
   const { price: pythPrice } = usePythPrice();
@@ -95,9 +105,52 @@ export default function TradeScreen() {
   }, []);
 
   const handleConfirm = useCallback(async () => {
+    if (!walletAddress || !currentPrice) return;
     setSubmitting(true);
     try {
-      // TODO: Build and send Anchor instruction via session key
+      const publicKey = new PublicKey(walletAddress);
+      const [market] = getMarketPda();
+      const isBid = direction === "long";
+
+      // Calculate base atoms: position size in SOL, converted to lamports (1e9)
+      const positionSol = positionSize / currentPrice;
+      const baseAtoms = Math.floor(positionSol * 1e9);
+
+      // Market order: ImmediateOrCancel with price buffer
+      const priceWithBuffer = isBid
+        ? currentPrice * 1.005  // 0.5% above for buys
+        : currentPrice * 0.995; // 0.5% below for sells
+      const priceMantissa = Math.round(priceWithBuffer * 100);
+      const priceExponent = -5;
+
+      const batchIx = buildBatchUpdate(publicKey, market, {
+        traderIndexHint: null,
+        cancels: [],
+        orders: [{
+          baseAtoms,
+          priceMantissa,
+          priceExponent,
+          isBid,
+          lastValidSlot: 0,
+          orderType: OrderType.ImmediateOrCancel,
+        }],
+      });
+
+      const tx = new Transaction();
+      tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 }));
+      tx.add(batchIx);
+
+      const { blockhash } = await magicblockConnection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = publicKey;
+
+      const signed = await signTransaction(tx);
+      const sig = await magicblockConnection.sendRawTransaction(
+        signed.serialize(),
+        { skipPreflight: true }
+      );
+      console.log(`[trade] ${direction} market order tx:`, sig);
+
       closeConfirmSheet();
       setAmountStr("");
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -108,6 +161,9 @@ export default function TradeScreen() {
         visibilityTime: 3000,
       });
 
+      // Refresh balance after trade
+      refreshBalance();
+
       // After first trade, prompt profile setup if not already done
       await setHasTraded();
       const [profileDone, promptShown] = await Promise.all([
@@ -117,17 +173,19 @@ export default function TradeScreen() {
       if (!profileDone && !promptShown) {
         setTimeout(() => setShowProfileSetup(true), 1500);
       }
-    } catch {
+    } catch (err) {
+      console.error("[trade] error:", err);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Toast.show({
         type: "error",
         text1: "Trade Failed",
-        text2: "Please try again.",
+        text2: err instanceof Error ? err.message : "Please try again.",
         visibilityTime: 3000,
       });
     } finally {
       setSubmitting(false);
     }
-  }, [direction, positionSize, leverage, closeConfirmSheet]);
+  }, [walletAddress, direction, positionSize, currentPrice, leverage, closeConfirmSheet, signTransaction, magicblockConnection, refreshBalance]);
 
   return (
     <SafeAreaView className="flex-1 bg-qban-black" edges={["top"]}>

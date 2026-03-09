@@ -78,6 +78,101 @@ export function buildMarketDeposit(
   });
 }
 
+// ─── Order Types & BatchUpdate ──────────────────────────────────
+
+export const OrderType = {
+  Limit: 0,
+  ImmediateOrCancel: 1,
+  PostOnly: 2,
+  Global: 3,
+  Reverse: 4,
+  ReverseTight: 5,
+} as const;
+
+export interface PlaceOrderParams {
+  baseAtoms: number;
+  priceMantissa: number;
+  priceExponent: number;
+  isBid: boolean;
+  lastValidSlot: number;
+  orderType: number;
+}
+
+export interface CancelOrderParams {
+  orderSequenceNumber: number;
+  orderIndexHint: number | null;
+}
+
+export interface BatchUpdateParams {
+  traderIndexHint: number | null;
+  cancels: CancelOrderParams[];
+  orders: PlaceOrderParams[];
+}
+
+const IX_BATCH_UPDATE = 6;
+
+function serializeOptionU32(value: number | null): Buffer {
+  if (value === null) {
+    return Buffer.from([0x00]);
+  }
+  const buf = Buffer.alloc(5);
+  buf[0] = 0x01;
+  buf.writeUInt32LE(value, 1);
+  return buf;
+}
+
+export function buildBatchUpdate(
+  payer: PublicKey,
+  market: PublicKey,
+  params: BatchUpdateParams
+): TransactionInstruction {
+  const parts: Buffer[] = [];
+
+  // Discriminator
+  parts.push(Buffer.from([IX_BATCH_UPDATE]));
+
+  // traderIndexHint: Option<u32>
+  parts.push(serializeOptionU32(params.traderIndexHint));
+
+  // cancels: Vec<CancelOrderParams>
+  const cancelLenBuf = Buffer.alloc(4);
+  cancelLenBuf.writeUInt32LE(params.cancels.length, 0);
+  parts.push(cancelLenBuf);
+
+  for (const cancel of params.cancels) {
+    const seqBN = new BN(cancel.orderSequenceNumber);
+    parts.push(seqBN.toArrayLike(Buffer, "le", 8));
+    parts.push(serializeOptionU32(cancel.orderIndexHint));
+  }
+
+  // orders: Vec<PlaceOrderParams>
+  const orderLenBuf = Buffer.alloc(4);
+  orderLenBuf.writeUInt32LE(params.orders.length, 0);
+  parts.push(orderLenBuf);
+
+  for (const order of params.orders) {
+    const baseAtomsBN = new BN(order.baseAtoms);
+    const orderBuf = Buffer.alloc(19); // 8 + 4 + 1 + 1 + 4 + 1
+    orderBuf.set(baseAtomsBN.toArrayLike(Buffer, "le", 8), 0);
+    orderBuf.writeUInt32LE(order.priceMantissa, 8);
+    orderBuf.writeInt8(order.priceExponent, 12);
+    orderBuf[13] = order.isBid ? 1 : 0;
+    orderBuf.writeUInt32LE(order.lastValidSlot, 14);
+    orderBuf[18] = order.orderType;
+    parts.push(orderBuf);
+  }
+
+  return new TransactionInstruction({
+    programId: MANIFEST_PROGRAM_ID,
+    keys: [
+      { pubkey: payer, isSigner: true, isWritable: false },
+      { pubkey: market, isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data: Buffer.concat(parts),
+  });
+}
+
 // ─── On-chain Market Account Parsing (RB-tree) ─────────────────
 // Ported from perp-ui/src/components/solana/market-instructions.ts
 
